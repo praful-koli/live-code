@@ -1,4 +1,4 @@
-// participant.service.js
+
 import participantRepository from "./participant.repository.js";
 import roomRepository from "../room/room.repository.js";
 
