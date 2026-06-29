@@ -1,7 +1,7 @@
 // room.service.js
 import roomRepository from "./room.repository.js";
 import participantRepository from "../participant/participant.repository.js";
-import { generateRoomCode } from "../../utils/generate-room-code.js";
+import { generateRoomCode } from "../../shared/utils/generate-room-code.js";
 
 class RoomService {
   async createRoom({ roomName, hostName }) {
