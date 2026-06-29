@@ -8,7 +8,8 @@ router.post('/create' , asyncHandler(roomController.createRoom.bind(roomControll
 
 router.post('/join' , asyncHandler(roomController.joinRoom.bind(roomController)) )
 
-router.patch('/:roomCode' , asyncHandler(roomController.renameRoom.bind(roomController)) )
-router.ge
+router.patch('/:roomCode/rename' , asyncHandler(roomController.renameRoom.bind(roomController)) )
+
+router.delete('/:roomCode/delete',asyncHandler(roomController.closeRoom.bind(roomController)))
 
 export default router
