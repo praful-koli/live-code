@@ -8,6 +8,7 @@ router.post('/create' , asyncHandler(roomController.createRoom.bind(roomControll
 
 router.post('/join' , asyncHandler(roomController.joinRoom.bind(roomController)) )
 
-router.post('/:roomCode' , asyncHandler(roomController.renameRoom.bind(roomController)) )
+router.patch('/:roomCode' , asyncHandler(roomController.renameRoom.bind(roomController)) )
+router.ge
 
 export default router
