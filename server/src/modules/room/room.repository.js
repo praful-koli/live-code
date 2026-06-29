@@ -1,13 +1,18 @@
+
 import Room from "./room.model.js";
 
-export const createRoomRepo = (data) => {
-  return Room.create(data);
-};
+class RoomRepository {
+  async create(data) {
+    return Room.create(data);
+  }
 
-export const findRoomByCodeRepo = (roomCode) => {
-  return Room.findOne({ roomCode: roomCode.toUpperCase() });
-};
+  async findByRoomCode(roomCode) {
+    return Room.findOne({ roomCode: roomCode.toUpperCase() });
+  }
 
-export const updateRoomRepo = (roomId, data) => {
-  return Room.findByIdAndUpdate(roomId, data, { new: true });
-};
+  async updateById(roomId, data) {
+    return Room.findByIdAndUpdate(roomId, data, { new: true });
+  }
+}
+
+export default new RoomRepository();
