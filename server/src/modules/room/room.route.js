@@ -8,4 +8,6 @@ router.post('/create' , asyncHandler(roomController.createRoom.bind(roomControll
 
 router.post('/join' , asyncHandler(roomController.joinRoom.bind(roomController)) )
 
+router.post('/:roomCode' , asyncHandler(roomController.renameRoom.bind(roomController)) )
+
 export default router
