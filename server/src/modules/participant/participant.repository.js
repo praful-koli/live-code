@@ -1,17 +1,22 @@
+
 import Participant from "./participant.model.js";
 
-export const createParticipantRepo = (data) => {
-  return Participant.create(data);
-};
+class ParticipantRepository {
+  async create(data) {
+    return Participant.create(data);
+  }
 
-export const findParticipantByIdRepo = (participantId) => {
-  return Participant.findById(participantId);
-};
+  async findById(id) {
+    return Participant.findById(id);
+  }
 
-export const getParticipantsByRoomRepo = (roomId) => {
-  return Participant.find({ roomId }).select("-__v");
-};
+  async findByRoomId(roomId) {
+    return Participant.find({ roomId }).select("-__v");
+  }
 
-export const updateParticipantRepo = (participantId, data) => {
-  return Participant.findByIdAndUpdate(participantId, data, { new: true });
-};
+  async updateById(id, data) {
+    return Participant.findByIdAndUpdate(id, data, { new: true });
+  }
+}
+
+export default new ParticipantRepository();
