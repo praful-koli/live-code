@@ -1,44 +1,77 @@
-import { generateRoomCode } from "../../shared/utils/generate-room-code.js";
+// room.service.js
+import roomRepository from "./room.repository.js";
+import participantRepository from "../participant/participant.repository.js";
+import { generateRoomCode } from "../../utils/generate-room-code.js";
 
-import {
-  createRoomRepo,
-  findRoomByCodeRepo,
-  updateRoomRepo,
-} from "./room.repository.js";
+class RoomService {
+  async createRoom({ roomName, hostName }) {
+    let roomCode;
+    let existingRoom;
 
-import {
-  createParticipantRepo,
-  findParticipantByIdRepo,
-} from "../participant/participant.repository.js";
-import Participant from "../participant/participant.model.js";
+    do {
+      roomCode = generateRoomCode();
+      existingRoom = await roomRepository.findByRoomCode(roomCode);
+    } while (existingRoom);
 
-export const createRoomService = async ({ roomName, hostName }) => {
-  let roomCode;
-  let existingRoom;
+    const room = await roomRepository.create({
+      roomCode,
+      roomName,
+      hostName,
+    });
 
-  do {
-    roomCode = generateRoomCode();
-    existingRoom = await findRoomByCodeRepo(roomCode);
-  } while (existingRoom);
+    const participant = await participantRepository.create({
+      roomId: room._id,
+      name: hostName,
+      isHost: true,
+      isOnline: true,
+    });
 
-  const room = await createRoomRepo({
-    roomCode,
-    roomName,
-    hostName,
-  });
-  
-  const hostParticipant = await createParticipantRepo({
-    roomId: room._id,
-    name: hostName,
-    isHost: true,
-    isOnline: true,
-  });
- 
-  room.hostParticipantId = hostParticipant._id;
-  await room.save()
+    room.hostParticipantId = participant._id;
+    await room.save();
 
-  return {
-    room,
-    participant : hostParticipant
+    return { room, participant };
   }
-};
+
+  async joinRoom({ roomCode, name }) {
+    const room = await roomRepository.findByRoomCode(roomCode);
+
+    if (!room) throw new Error("Invalid room code");
+    if (room.isClosed) throw new Error("Room is closed");
+    if (room.isLocked) throw new Error("Room is locked");
+
+    const participant = await participantRepository.create({
+      roomId: room._id,
+      name,
+      isHost: false,
+      isOnline: true,
+    });
+
+    return { room, participant };
+  }
+
+  async renameRoom({ roomCode, participantId, roomName }) {
+    const room = await roomRepository.findByRoomCode(roomCode);
+    if (!room) throw new Error("Room not found");
+
+    const participant = await participantRepository.findById(participantId);
+    if (!participant || !participant.isHost) {
+      throw new Error("Only host can rename room");
+    }
+
+    return roomRepository.updateById(room._id, { roomName });
+  }
+
+  async closeRoom({ roomCode, participantId }) {
+    const room = await roomRepository.findByRoomCode(roomCode);
+    if (!room) throw new Error("Room not found");
+
+    const participant = await participantRepository.findById(participantId);
+    if (!participant || !participant.isHost) {
+      throw new Error("Only host can close room");
+    }
+
+    return roomRepository.updateById(room._id, { isClosed: true });
+  }
+}
+
+export default new RoomService();
