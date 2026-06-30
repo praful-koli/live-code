@@ -1,38 +1,36 @@
 import createApp from "./app.js";
-import config from "./config/config.js";
-import connectDB from "./config/database.js";
+import env from "./config/config.js";
 import logger from "./config/logger.js";
+import connectDB from "./config/database.js";
 import http from "http";
 import { Server } from "socket.io";
-import { registerSocketHandlers } from "./realtime/socketHandlers.js";
+import { initializeSocket } from "./sockets/index.socket.js";
 
 const app = createApp();
+
 const httpServer = http.createServer(app);
+
 const io = new Server(httpServer, {
   cors: {
-    origin: true,
+    origin: "http://localhost:5173",
     methods: ["GET", "POST"],
+    credentials: true,
   },
 });
 
-async function startServer() {
+app.set("io", io);
+
+initializeSocket(io);
+
+function startServer() {
   connectDB()
     .then(() => {
-      io.on("connection", (socket) => {
-        console.log("New connection:", socket.id);
-        registerSocketHandlers(io, socket);
-      });
-
-      httpServer.listen(config.PORT, () => {
-        logger.info(
-          { port: config.PORT },
-          `\x1b[46mServer started on port\x1b[0m`,
-        );
+      httpServer.listen(env.PORT, () => {
+        logger.info({ port: env.PORT }, "server running");
       });
     })
-    .catch((error) => {
-      console.error("Failed to start server:", error);
-      process.exit(1);
+    .catch((err) => {
+      logger.error({ error: err }, "error while running server");
     });
 }
 

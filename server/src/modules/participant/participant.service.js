@@ -7,13 +7,23 @@ class ParticipantService {
     const room = await roomRepository.findByRoomCode(roomCode);
 
     if (!room) {
-      throw new ApiError.notFound("Room not found");
+      throw ApiError.notFound("Room not found");
     }
 
     return participantRepository.findByRoomId(room._id);
   }
 
   async updateSocket(participantId, socketId) {
+    const participant = await participantRepository.findById(participantId);
+
+    if (!participant) {
+      throw ApiError.notFound("Participant not found");
+    }
+
+    if (participant.isRemoved) {
+      throw ApiError.badRequest("Participant removed from room");
+    }
+
     return participantRepository.updateById(participantId, {
       socketId,
       isOnline: true,
@@ -25,6 +35,10 @@ class ParticipantService {
       socketId: null,
       isOnline: false,
     });
+  }
+
+  async findBySocketId(socketId) {
+    return participantRepository.findBySocketId(socketId);
   }
 }
 
