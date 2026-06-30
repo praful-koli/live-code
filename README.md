@@ -288,9 +288,51 @@ When adding a new feature, create a folder under `modules/` and follow the exist
 
 ---
 
-## Need Help?
-
-- Open an [issue](https://github.com/praful-koli/live-code/issues) describing your problem
-- Tag it with `question` or `help wanted`
-
 Happy contributing! 🚀
+
+---
+
+## CodeRoom Project Overview (Hack-Sprint)
+
+This repository contains the complete implementation of **CodeRoom** — a real-time collaborative code editor with MongoDB persistence, real-time presence indicators, host controls, and custom delta-based sync engine.
+
+### Team Roles & Domain Splits
+- **Domain A (Auth & Room Management):** Room CRUD, shareable room codes, join-by-code validation, session reconnect logic, and cookie-based host privileges.
+- **Domain B (Document & Sync Engine):** Monospace shared text editor, delta-based edits (computes insertions/deletions on changes), and custom **Position-Shift Transform (OT-lite)** conflict resolution strategy.
+- **Domain C (Realtime & Presence):** Socket.io rooms, typing indicators, active editor updates, and cursor positions.
+- **MongoDB Persistence:** Managed jointly, persisting room status and document versions to MongoDB Atlas.
+
+### Conflict-Resolution Strategy (Domain B)
+For our collaborative editing sync engine, we chose a custom **Position-Shift Transform (OT-lite)** strategy instead of any banned CRDT/OT libraries:
+1. Every keystroke is converted into a **delta** operation: `{ type: "insert"|"delete", position: number, text: string, version: number }`.
+2. The server keeps an authoritative monotonically increasing version counter and a recent operation log.
+3. When a delta from a client arrives, the server checks if the client's version is stale.
+4. If stale, it **transforms** the delta's target position by shifting it left or right based on all intermediate operations the client missed (e.g., shifting right by the length of other participants' insertions).
+5. The server applies the transformed delta, updates MongoDB, and broadcasts the transformed delta to all other room members, keeping cursor positions aligned without overwrites.
+
+### Quick Start Guide
+
+#### 1. Setup Backend (.env)
+Go to the `server/` directory and configure the environment variables:
+```bash
+cd server
+cp .env.example .env
+```
+Fill in the `MONGO_URI` with your MongoDB connection string (e.g., MongoDB Atlas).
+
+#### 2. Start Backend Server
+```bash
+npm install
+npm run dev
+```
+By default, the backend runs on `http://localhost:3000`.
+
+#### 3. Start Frontend Client
+In a new terminal window, navigate to the `client/` directory:
+```bash
+cd client
+npm install
+npm run dev
+```
+Open `http://localhost:5173` in your browser. Open multiple windows/tabs to test the real-time synchronization, cursor positioning, typing indicators, and host actions!
+
