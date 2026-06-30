@@ -7,7 +7,7 @@ const OAuthStatus = process.env.GOOGLE_OAUTH_STATUS === "enable";
 
 const config = {
 	PORT: Number(process.env.PORT) || constants.PORT,
-	MONGO_URI: process.env.MONGO_URI || constants.MONGO_URI,
+	MONGO_URI: process.env.MONGO_URI || process.env.MONGODB_URI || constants.MONGO_URI,
 	JWT_SECRET_ACCESS: process.env.JWT_SECRET_ACCESS,
 	JWT_SECRET_REFRESH: process.env.JWT_SECRET_REFRESH,
 	CLIENT_URL: process.env.CLIENT_URL || "",
