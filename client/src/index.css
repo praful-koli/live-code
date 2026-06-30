@@ -1,25 +1,19 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @import "tailwindcss";
 
 :root {
-  --bg-primary: #0a0b0d;
-  --surface: rgba(22, 24, 28, 0.75);
-  --surface-raised: rgba(30, 34, 40, 0.85);
-  --surface-sunken: rgba(0, 0, 0, 0.25);
-  --text-primary: #f5f5f7;
-  --text-secondary: #9ea4b0;
-  --text-tertiary: #636875;
-  --border: rgba(255, 255, 255, 0.06);
-  --border-strong: rgba(255, 255, 255, 0.12);
-  --accent: #8ba4b9; /* Sophisticated steel blue/slate grey */
-  --accent-soft: rgba(139, 164, 185, 0.1);
-  --success: #63b175; /* Premium soft green */
-  --warning: #e09f53;
-  --danger: #cf6666;
-  --radius-sm: 10px;
-  --radius-md: 16px;
-  --radius-lg: 24px;
+  --bg: #090a0c;
+  --panel: rgba(20, 22, 26, 0.7);
+  --panel-active: rgba(28, 30, 36, 0.85);
+  --text-main: #f3f4f6;
+  --text-muted: #8e939e;
+  --accent: #4f7396;
+  --accent-soft: rgba(79, 115, 150, 0.15);
+  --success: #52a874;
+  --danger: #d95f5f;
+  --border: rgba(255, 255, 255, 0.05);
+  --border-focus: rgba(255, 255, 255, 0.15);
 }
 
 * {
@@ -28,341 +22,149 @@
   padding: 0;
 }
 
-html {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  color: var(--text-primary);
-  background: var(--bg-primary);
-}
-
 body {
+  background-color: var(--bg);
+  color: var(--text-main);
+  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
   min-height: 100vh;
-  /* Premium structural pattern to highlight the liquid glass refraction */
-  background-color: var(--bg-primary);
+  /* Minimal sharp coordinate grid */
   background-image: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-  background-size: 60px 60px;
-  background-position: center;
+    linear-gradient(to right, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+  background-size: 80px 80px;
 }
 
-::selection {
-  background: rgba(255, 255, 255, 0.15);
-  color: var(--text-primary);
-}
-
-/* Scrollbar */
+/* Custom scrollbars */
 ::-webkit-scrollbar {
   width: 4px;
   height: 4px;
 }
-
 ::-webkit-scrollbar-track {
   background: transparent;
 }
-
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-/* Input styling */
-.input-field {
+/* Inputs */
+.input-minimal {
   width: 100%;
-  padding: 14px 18px;
-  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  border-radius: 12px;
   border: 1px solid var(--border);
   background: rgba(0, 0, 0, 0.4);
-  font-size: 15px;
-  font-family: inherit;
-  color: var(--text-primary);
-  transition: border-color 0.2s, background-color 0.2s;
+  font-size: 14px;
+  color: var(--text-main);
   outline: none;
+  transition: all 0.2s ease;
 }
-
-.input-field:focus {
-  border-color: var(--accent);
+.input-minimal:focus {
+  border-color: var(--border-focus);
   background: rgba(0, 0, 0, 0.6);
 }
 
-.input-field::placeholder {
-  color: var(--text-tertiary);
-}
-
-.input-field.mono {
-  font-family: 'JetBrains Mono', monospace;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-}
-
 /* Buttons */
-.btn-primary {
+.btn-action {
   width: 100%;
-  padding: 16px 24px;
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: #f5f5f7;
-  color: #0a0b0d;
-  font-size: 15px;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  transition: background 0.15s, transform 0.1s;
-  letter-spacing: -0.01em;
-}
-
-.btn-primary:hover {
-  background: #ffffff;
-}
-
-.btn-primary:active {
-  transform: scale(0.985);
-}
-
-.btn-secondary {
-  padding: 10px 18px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-strong);
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-primary);
-  font-size: 13px;
-  font-weight: 500;
-  font-family: inherit;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
-}
-
-.btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-.btn-danger {
-  padding: 10px 18px;
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(207, 102, 102, 0.2);
-  background: rgba(207, 102, 102, 0.08);
-  color: var(--danger);
-  font-size: 13px;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.btn-danger:hover {
-  background: rgba(207, 102, 102, 0.15);
-}
-
-/* Tabs */
-.tab-group {
-  display: flex;
-  padding: 4px;
-  border-radius: var(--radius-md);
-  background: var(--surface-sunken);
-  border: 1px solid var(--border);
-}
-
-.tab-btn {
-  flex: 1;
-  padding: 12px 16px;
+  padding: 14px 20px;
   border-radius: 12px;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #f3f4f6;
+  color: #090a0c;
   font-size: 14px;
-  font-weight: 500;
-  font-family: inherit;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  background: transparent;
-  color: var(--text-secondary);
+}
+.btn-action:hover {
+  background: #ffffff;
+  transform: translateY(-1px);
+}
+.btn-action:active {
+  transform: translateY(0);
 }
 
-.tab-btn.active {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--text-primary);
-  font-weight: 600;
-}
-
-/* Badge / Chip */
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  border-radius: 100px;
+.btn-secondary-min {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-main);
   font-size: 12px;
   font-weight: 500;
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-secondary-min:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--border-focus);
 }
 
-.chip .dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-}
-
-.chip.success .dot {
-  background: var(--success);
-}
-
-.chip.danger .dot {
-  background: var(--danger);
-}
-
-/* Label */
-.field-label {
-  display: block;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin-bottom: 8px;
-}
-
-/* Editor area */
-.editor-textarea {
+/* Editor */
+.editor-pane {
   width: 100%;
   height: 100%;
-  min-height: 580px;
+  min-height: 600px;
   resize: none;
   border: none;
   background: transparent;
   padding: 24px;
   font-size: 14px;
-  line-height: 1.7;
-  font-family: 'JetBrains Mono', monospace;
-  color: var(--text-primary);
-  outline: none;
-  tab-size: 2;
-}
-
-.editor-textarea::placeholder {
-  color: var(--text-tertiary);
-}
-
-/* Participant card */
-.participant-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 14px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.02);
-  transition: background 0.15s;
-}
-
-.participant-row:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-/* Activity log */
-.log-entry {
-  display: flex;
-  gap: 10px;
-  font-size: 12px;
-  font-family: 'JetBrains Mono', monospace;
   line-height: 1.6;
-}
-
-.log-time {
-  color: var(--text-tertiary);
-  flex-shrink: 0;
-}
-
-.log-text {
-  color: var(--text-secondary);
-  word-break: break-word;
-}
-
-/* Host control grid */
-.host-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-.host-btn {
-  padding: 10px 14px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.03);
-  font-size: 12px;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  color: var(--text-primary);
-  transition: background 0.15s;
-}
-
-.host-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.host-btn.warn {
-  border-color: rgba(224, 159, 83, 0.3);
-  color: var(--warning);
-  background: rgba(224, 159, 83, 0.05);
-}
-
-.host-btn.warn:hover {
-  background: rgba(224, 159, 83, 0.12);
-}
-
-.host-btn.safe {
-  border-color: rgba(99, 177, 117, 0.3);
-  color: var(--success);
-  background: rgba(99, 177, 117, 0.05);
-}
-
-.host-btn.safe:hover {
-  background: rgba(99, 177, 117, 0.12);
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-main);
+  outline: none;
 }
 
 /* Toast */
-.toast {
+.toast-minimal {
   position: fixed;
   bottom: 24px;
   right: 24px;
-  padding: 14px 22px;
-  border-radius: var(--radius-md);
-  background: #f5f5f7;
-  color: #0a0b0d;
+  padding: 12px 20px;
+  border-radius: 12px;
+  background: #f3f4f6;
+  color: #090a0c;
   font-size: 13px;
   font-weight: 600;
   z-index: 100;
-  max-width: 380px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
-  animation: toastIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes toastIn {
-  from { opacity: 0; transform: translateY(12px) scale(0.95); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-/* Kick button */
-.kick-btn {
+.participant-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid var(--border);
+  transition: background 0.15s;
+}
+.participant-item:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.kick-btn-min {
   border: none;
   background: none;
-  color: var(--text-tertiary);
+  color: var(--text-muted);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 12px;
   padding: 2px 6px;
-  border-radius: 6px;
-  transition: color 0.15s, background 0.15s;
+  border-radius: 4px;
+  transition: all 0.15s;
 }
-
-.kick-btn:hover {
+.kick-btn-min:hover {
   color: var(--danger);
-  background: rgba(207, 102, 102, 0.15);
+  background: rgba(217, 95, 95, 0.15);
 }
