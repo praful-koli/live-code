@@ -5,12 +5,12 @@ class ParticipantRepository {
     return Participant.create(data);
   }
 
-  async findById(participantId) {
-    return Participant.findById(participantId);
+  async findById(id) {
+    return Participant.findById(id);
   }
 
-  async findByIdWithHostKey(participantId) {
-    return Participant.findById(participantId).select("+hostKey");
+  async findByIdWithHostKey(id) {
+    return Participant.findById(id).select("+hostKey");
   }
 
   async findByRoomId(roomId) {
@@ -20,10 +20,14 @@ class ParticipantRepository {
     }).select("-hostKey -__v");
   }
 
-  async updateById(participantId, data) {
-    return Participant.findByIdAndUpdate(participantId, data, {
+  async updateById(id, data) {
+    return Participant.findByIdAndUpdate(id, data, {
       new: true,
     });
+  }
+
+  async findBySocketId(socketId) {
+    return Participant.findOne({ socketId });
   }
 }
 
