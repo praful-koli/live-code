@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Glass } from "@samasante/liquid-glass";
+import gsap from "gsap";
 import socket from "./socket";
 
 const API = import.meta.env.VITE_SERVER_URL
@@ -24,11 +24,10 @@ const App = () => {
   const [isLocked, setIsLocked] = useState(false);
   const [connected, setConnected] = useState(socket.connected);
 
-  // Custom Optics
-  const [gridEnabled, setGridEnabled] = useState(true);
-  const [frostLevel, setFrostLevel] = useState(2.0);
-  const [dispersion, setDispersion] = useState(0.25);
-
+  const containerRef = useRef(null);
+  const tabContentRef = useRef(null);
+  const sliderIndicatorRef = useRef(null);
+  const bgLinesRef = useRef(null);
   const textareaRef = useRef(null);
   const contentRef = useRef("");
   const versionRef = useRef(0);
@@ -37,7 +36,71 @@ const App = () => {
   useEffect(() => { contentRef.current = content; }, [content]);
   useEffect(() => { versionRef.current = version; }, [version]);
 
-  const log = (msg) => setLogs((p) => [...p.slice(-15), { id: Math.random(), text: msg, time: new Date().toLocaleTimeString() }]);
+  const log = (msg) => setLogs((p) => [...p.slice(-12), { id: Math.random(), text: msg, time: new Date().toLocaleTimeString() }]);
+
+  // Background Interactive SVGs - GSAP animated lines
+  useEffect(() => {
+    const lines = bgLinesRef.current;
+    if (lines) {
+      gsap.killTweensOf(lines.querySelectorAll("line"));
+      gsap.fromTo(lines.querySelectorAll("line"),
+        { strokeDashoffset: 100 },
+        { strokeDashoffset: 0, duration: 4, ease: "linear", repeat: -1, stagger: 0.5 }
+      );
+    }
+  }, [joined]);
+
+  // Entrance animations for panels
+  useEffect(() => {
+    if (joined) {
+      gsap.fromTo(".workspace-panel", 
+        { y: 30, opacity: 0 }, 
+        { y: 0, opacity: 1, duration: 0.7, ease: "power4.out", stagger: 0.1 }
+      );
+    } else {
+      gsap.fromTo(".landing-card", 
+        { scale: 0.95, opacity: 0 }, 
+        { scale: 1, opacity: 1, duration: 0.6, ease: "power3.out" }
+      );
+    }
+  }, [joined]);
+
+  // Version bump animation
+  useEffect(() => {
+    if (version > 0) {
+      gsap.fromTo(".version-chip", 
+        { scale: 1.25, backgroundColor: "rgba(255,255,255,0.2)" }, 
+        { scale: 1, backgroundColor: "rgba(255,255,255,0.05)", duration: 0.4, ease: "back.out(1.7)" }
+      );
+    }
+  }, [version]);
+
+  // Tab change animation
+  const handleTabChange = (nextTab) => {
+    if (nextTab === tab) return;
+    const isCreate = nextTab === "create";
+    // Slide background pill
+    gsap.to(sliderIndicatorRef.current, {
+      left: isCreate ? "calc(50% + 1px)" : "3px",
+      duration: 0.35,
+      ease: "power3.inOut"
+    });
+    // Fade out form fields, update state, and fade back in
+    gsap.to(tabContentRef.current, {
+      opacity: 0,
+      y: -6,
+      duration: 0.15,
+      onComplete: () => {
+        setTab(nextTab);
+        gsap.to(tabContentRef.current, {
+          opacity: 1,
+          y: 0,
+          duration: 0.25,
+          ease: "power2.out"
+        });
+      }
+    });
+  };
 
   useEffect(() => {
     const c = localStorage.getItem("cr_code"), n = localStorage.getItem("cr_name"),
@@ -53,7 +116,7 @@ const App = () => {
     const onLeft = (p) => log(`${p.name} left`);
     const onTyping = ({ participant }) => setTypingUsers((prev) => [...new Set([...prev, participant.name])]);
     const onStopTyping = ({ participant }) => setTypingUsers((prev) => prev.filter((n) => n !== participant.name));
-    const onDocLoad = ({ content: c, version: v }) => { setContent(c); setVersion(v); log(`Loaded document (v${v})`); };
+    const onDocLoad = ({ content: c, version: v }) => { setContent(c); setVersion(v); log(`Sync v${v}`); };
     const onDocAck = ({ version: v }) => setVersion(v);
     const onDocDelta = ({ delta, version: v }) => {
       const old = contentRef.current, cursor = textareaRef.current?.selectionStart || 0;
@@ -95,7 +158,7 @@ const App = () => {
     socket.emit("room:join", { roomCode: code.toUpperCase(), participantId: pid });
     socket.emit("doc:load", { roomCode: code.toUpperCase() });
     fetch(`${API}/${code}`, { credentials: "include" }).then(r => r.json()).then(d => { if (d.success) setIsLocked(d.data?.isLocked || false); }).catch(() => {});
-    setJoined(true); log("Joined session");
+    setJoined(true); log("Session initialized");
   };
 
   const save = (c, n, p, h) => { localStorage.setItem("cr_code", c); localStorage.setItem("cr_name", n); localStorage.setItem("cr_pid", p); localStorage.setItem("cr_host", String(h)); };
@@ -162,171 +225,124 @@ const App = () => {
     } catch (e) { alert(e.message); return null; }
   };
 
-  // Base Minimalist Glass Panel
-  const GlassPanel = ({ children, style = {} }) => (
-    <Glass
-      style={{ borderRadius: 20, background: "rgba(20, 22, 26, 0.45)", ...style }}
-      optics={{ frost: frostLevel, dispersion: dispersion }}
-    >
-      <div style={{ padding: 24, borderRadius: 20, background: "rgba(24, 26, 32, 0.72)", border: "1px solid rgba(255,255,255,0.05)", backdropFilter: "blur(24px)" }}>
-        {children}
-      </div>
-    </Glass>
-  );
-
-  // Aave Switch component
-  const AaveSwitch = ({ checked, onChange }) => {
-    const pos = checked ? "calc(100% - 22px)" : "2px";
-    return (
-      <div onClick={() => onChange(!checked)} style={{ position: "relative", width: 48, height: 26, borderRadius: 13, background: checked ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer" }}>
-        <Glass style={{ position: "absolute", top: 2, left: pos, width: 20, height: 20, borderRadius: 10, background: checked ? "#f3f4f6" : "rgba(255,255,255,0.35)", transition: "left 0.2s ease" }} optics={{ frost: 1, dispersion: 0.1 }}>
-          <div style={{ width: "100%", height: "100%" }} />
-        </Glass>
-      </div>
-    );
-  };
-
-  // Aave Slider component
-  const AaveSlider = ({ min, max, step, value, onChange }) => {
-    const pct = ((value - min) / (max - min)) * 100;
-    const handleMouseDown = (e) => {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const update = (clientX) => {
-        const pctPos = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-        const val = min + pctPos * (max - min);
-        onChange(Math.round(val / step) * step);
-      };
-      update(e.clientX);
-      const onMove = (me) => update(me.clientX);
-      const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); };
-      document.addEventListener("mousemove", onMove); document.addEventListener("mouseup", onUp);
-    };
-    return (
-      <div onMouseDown={handleMouseDown} style={{ position: "relative", height: 32, display: "flex", alignItems: "center", cursor: "pointer", userSelect: "none" }}>
-        <div style={{ width: "100%", height: 4, borderRadius: 2, background: "rgba(0,0,0,0.5)", position: "relative" }}>
-          <div style={{ width: `${pct}%`, height: "100%", background: "rgba(255,255,255,0.15)", borderRadius: 2 }} />
-        </div>
-        <Glass style={{ position: "absolute", left: `calc(${pct}% - 12px)`, width: 24, height: 24, borderRadius: 12, background: "rgba(255,255,255,0.45)", border: "1px solid rgba(255,255,255,0.15)" }} optics={{ frost: 1.5, dispersion: 0.1 }}>
-          <div style={{ width: "100%", height: "100%" }} />
-        </Glass>
-      </div>
-    );
-  };
-
-  // Aave Toggle Group
-  const AaveToggleGroup = ({ active, options, onChange }) => {
-    const idx = options.findIndex(o => o.value === active);
-    const w = 100 / options.length;
-    return (
-      <div style={{ position: "relative", display: "flex", padding: 3, borderRadius: 12, background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.04)" }}>
-        <Glass style={{ position: "absolute", top: 3, bottom: 3, left: `calc(${idx * w}% + 3px)`, width: `calc(${w}% - 6px)`, borderRadius: 9, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", transition: "left 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)", zIndex: 1 }} optics={{ frost: 2, dispersion: 0.15 }}>
-          <div style={{ width: "100%", height: "100%" }} />
-        </Glass>
-        {options.map((opt) => (
-          <button key={opt.value} onClick={() => onChange(opt.value)} style={{ position: "relative", flex: 1, padding: "10px 12px", borderRadius: 9, border: "none", background: "transparent", color: active === opt.value ? "#f3f4f6" : "#8e939e", fontSize: 13, fontWeight: active === opt.value ? 600 : 500, cursor: "pointer", zIndex: 2 }}>{opt.label}</button>
-        ))}
-      </div>
-    );
-  };
-
   return (
-    <div style={{ minHeight: "100vh", padding: 24 }}>
-      <style>{`
-        body { background-image: ${gridEnabled ? "linear-gradient(to right, rgba(255, 255, 255, 0.012) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.012) 1px, transparent 1px)" : "none"}; }
-      `}</style>
+    <div ref={containerRef} style={{ minHeight: "100vh", padding: 24, position: "relative" }}>
+      
+      {/* Background Interactive SVGs */}
+      <svg ref={bgLinesRef} className="canvas-bg" viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg">
+        <line x1="10%" y1="0" x2="10%" y2="100%" stroke="var(--border)" strokeWidth="1" strokeDasharray="5,5" />
+        <line x1="50%" y1="0" x2="50%" y2="100%" stroke="var(--border)" strokeWidth="1" strokeDasharray="5,5" />
+        <line x1="90%" y1="0" x2="90%" y2="100%" stroke="var(--border)" strokeWidth="1" strokeDasharray="5,5" />
+        <line x1="0" y1="30%" x2="100%" y2="30%" stroke="var(--border)" strokeWidth="1" strokeDasharray="5,5" />
+        <line x1="0" y1="70%" x2="100%" y2="70%" stroke="var(--border)" strokeWidth="1" strokeDasharray="5,5" />
+      </svg>
 
       <div style={{ maxWidth: 1280, margin: "0 auto", display: "flex", flexDirection: "column", gap: 20 }}>
         
-        {/* Minimal Header */}
+        {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 4px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <Glass style={{ width: 14, height: 14, borderRadius: 4, background: "rgba(255,255,255,0.1)", display: "inline-block" }} optics={{ frost: 2, dispersion: 0.2 }}>
-              <div style={{ width: "100%", height: "100%" }} />
-            </Glass>
-            <span style={{ fontSize: 18, fontWeight: 700, letterSpacing: "-0.02em" }}>CodeRoom</span>
+            <svg style={{ width: 24, height: 24, fill: "none", stroke: "var(--accent)", strokeWidth: 2 }} viewBox="0 0 24 24">
+              <path d="M16 18l6-6-6-6M8 6L2 12l6 6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: "-0.03em" }}>CodeRoom</span>
           </div>
-          <span style={{ fontSize: 11, fontWeight: 600, color: connected ? "var(--success)" : "var(--danger)", display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ width: 6, height: 6, borderRadius: "50%", background: connected ? "var(--success)" : "var(--danger)" }} />
-            {connected ? "LIVE" : "DISCONNECTED"}
-          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: connected ? "var(--success)" : "var(--danger)", display: "flex", alignItems: "center", gap: 6 }}>
+              <span className="live-dot" style={{ width: 6, height: 6, borderRadius: "50%", background: connected ? "var(--success)" : "var(--danger)", display: "inline-block" }} />
+              {connected ? "LIVE" : "DISCONNECTED"}
+            </span>
+          </div>
         </div>
 
         {!joined ? (
-          /* ─── LANDING SCREEN (No extra text, clean form) ─── */
-          <div style={{ maxWidth: 460, margin: "60px auto 0 auto", width: "100%" }}>
-            <GlassPanel>
-              <AaveToggleGroup active={tab} options={[{ label: "Join Room", value: "join" }, { label: "Create Room", value: "create" }]} onChange={setTab} />
-              <div style={{ height: 24 }} />
-
-              {tab === "join" ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-                  <div><label className="field-label">Room Token</label><input className="input-minimal mono" value={roomCode} onChange={(e) => setRoomCode(e.target.value)} placeholder="TOKEN" /></div>
-                  <div><label className="field-label">Nickname</label><input className="input-minimal" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Your Name" /></div>
-                  <button className="btn-action" onClick={handleJoin}>Join Session</button>
-                </div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-                  <div><label className="field-label">Workspace Identifier</label><input className="input-minimal" value={roomName} onChange={(e) => setRoomName(e.target.value)} placeholder="Workspace Name" /></div>
-                  <div><label className="field-label">Host Nickname</label><input className="input-minimal" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Host Name" /></div>
-                  <button className="btn-action" onClick={handleCreate}>Provision Room</button>
-                </div>
-              )}
-            </GlassPanel>
-            
-            {/* Clean Config Panel underneath */}
-            <div style={{ height: 16 }} />
-            <GlassPanel>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 13, color: "var(--text-muted)", fontWeight: 500 }}>Refraction grid overlay</span>
-                <AaveSwitch checked={gridEnabled} onChange={setGridEnabled} />
+          /* ─── LANDING SCREEN ─── */
+          <div style={{ maxWidth: 440, margin: "80px auto 0 auto", width: "100%" }}>
+            <div className="panel-prem landing-card">
+              {/* Tab Selector */}
+              <div className="custom-tabs">
+                <div ref={sliderIndicatorRef} className="custom-tab-active-indicator" />
+                <button className={`custom-tab-btn ${tab === "join" ? "active" : ""}`} onClick={() => handleTabChange("join")}>Join Room</button>
+                <button className={`custom-tab-btn ${tab === "create" ? "active" : ""}`} onClick={() => handleTabChange("create")}>Create Room</button>
               </div>
-            </GlassPanel>
+
+              <div style={{ height: 28 }} />
+
+              {/* Form Content Wrapper */}
+              <div ref={tabContentRef}>
+                {tab === "join" ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+                    <div>
+                      <label className="field-label">Room Token</label>
+                      <input className="input-premium mono" value={roomCode} onChange={(e) => setRoomCode(e.target.value)} placeholder="ABCD" />
+                    </div>
+                    <div>
+                      <label className="field-label">Display Nickname</label>
+                      <input className="input-premium" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Nickname" />
+                    </div>
+                    <button className="btn-premium" onClick={handleJoin}>Join Session</button>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+                    <div>
+                      <label className="field-label">Room Name</label>
+                      <input className="input-premium" value={roomName} onChange={(e) => setRoomName(e.target.value)} placeholder="My Workspace" />
+                    </div>
+                    <div>
+                      <label className="field-label">Host Nickname</label>
+                      <input className="input-premium" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Host Name" />
+                    </div>
+                    <button className="btn-premium" onClick={handleCreate}>Provision Room</button>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         ) : (
           /* ─── MINIMAL EDITOR WORKSPACE ─── */
           <div style={{ display: "grid", gap: 20, gridTemplateColumns: "280px 1fr" }}>
             
-            {/* Sidebar */}
+            {/* Sidebar Columns */}
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               
               {/* Session details */}
-              <GlassPanel>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+              <div className="panel-prem workspace-panel">
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
                   <div>
-                    <span style={{ fontSize: 10, fontWeight: 600, color: "var(--text-muted)", letterSpacing: "0.06em" }}>ROOM TOKEN</span>
-                    <p style={{ fontSize: 22, fontWeight: 700, fontFamily: "monospace", letterSpacing: "0.04em", marginTop: 2 }}>{roomCode.toUpperCase()}</p>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.08em" }}>ROOM TOKEN</span>
+                    <p style={{ fontSize: 24, fontWeight: 800, fontFamily: "monospace", letterSpacing: "0.05em", marginTop: 2 }}>{roomCode.toUpperCase()}</p>
                   </div>
-                  <button className="btn-secondary-min" onClick={handleLeave}>Leave</button>
+                  <button className="btn-secondary-prem" onClick={handleLeave}>Leave</button>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", justifyItems: "center", gap: 8, padding: "8px 12px", background: "rgba(0,0,0,0.25)", borderRadius: 8, border: "1px solid var(--border)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "var(--panel-sunken)", borderRadius: 8, border: "1px solid var(--border)" }}>
                   <span style={{ fontSize: 13, fontWeight: 600 }}>{displayName}</span>
                   <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 4, background: isHost ? "var(--accent-soft)" : "rgba(255,255,255,0.04)", color: isHost ? "var(--accent)" : "var(--text-muted)", border: "1px solid rgba(255,255,255,0.04)" }}>{isHost ? "HOST" : "MEMBER"}</span>
                 </div>
-              </GlassPanel>
+              </div>
 
-              {/* Host Controls */}
+              {/* Host Control Deck */}
               {isHost && (
-                <GlassPanel>
-                  <span className="field-label" style={{ marginBottom: 12 }}>Room Actions</span>
+                <div className="panel-prem workspace-panel">
+                  <span className="field-label" style={{ marginBottom: 12 }}>Room Controls</span>
                   <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-                    <button style={{ flex: 1 }} className="btn-secondary-min" onClick={async () => { const n = prompt("Rename room:"); if (n) { await hostAct(`${API}/${roomCode.toUpperCase()}/rename`, "PATCH", { roomName: n.trim() }); log("Room renamed"); } }}>Rename</button>
+                    <button style={{ flex: 1 }} className="btn-secondary-prem" onClick={async () => { const n = prompt("Rename room:"); if (n) { await hostAct(`${API}/${roomCode.toUpperCase()}/rename`, "PATCH", { roomName: n.trim() }); log("Room renamed"); } }}>Rename</button>
                     {isLocked
-                      ? <button className="btn-secondary-min" style={{ color: "var(--success)", borderColor: "rgba(82, 168, 116, 0.2)" }} onClick={async () => { if (await hostAct(`${API}/${roomCode.toUpperCase()}/unlock`)) { setIsLocked(false); log("Unlocked"); } }}>Unlock</button>
-                      : <button className="btn-secondary-min" style={{ color: "var(--warning)", borderColor: "rgba(224, 159, 83, 0.2)" }} onClick={async () => { if (await hostAct(`${API}/${roomCode.toUpperCase()}/lock`)) { setIsLocked(true); log("Locked"); } }}>Lock</button>}
+                      ? <button className="btn-secondary-prem" style={{ color: "var(--success)", borderColor: "rgba(82, 168, 116, 0.2)" }} onClick={async () => { if (await hostAct(`${API}/${roomCode.toUpperCase()}/unlock`)) { setIsLocked(false); log("Unlocked"); } }}>Unlock</button>
+                      : <button className="btn-secondary-prem" style={{ color: "var(--warning)", borderColor: "rgba(224, 159, 83, 0.2)" }} onClick={async () => { if (await hostAct(`${API}/${roomCode.toUpperCase()}/lock`)) { setIsLocked(true); log("Locked"); } }}>Lock</button>}
                   </div>
-                  <button className="btn-secondary-min" style={{ width: "100%", color: "var(--danger)", borderColor: "rgba(217, 95, 95, 0.2)" }} onClick={async () => { if (confirm("Close room for everyone?") && await hostAct(`${API}/${roomCode.toUpperCase()}/delete`, "DELETE")) handleLeave(); }}>Terminate Room</button>
-                </GlassPanel>
+                  <button className="btn-secondary-prem" style={{ width: "100%", color: "var(--danger)", borderColor: "rgba(217, 95, 95, 0.2)" }} onClick={async () => { if (confirm("Close workspace for everyone?") && await hostAct(`${API}/${roomCode.toUpperCase()}/delete`, "DELETE")) handleLeave(); }}>Terminate Room</button>
+                </div>
               )}
 
-              {/* Active Participants */}
-              <GlassPanel>
+              {/* Participants Roster */}
+              <div className="panel-prem workspace-panel">
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-                  <span className="field-label" style={{ margin: 0 }}>Roster</span>
+                  <span className="field-label" style={{ margin: 0 }}>Active Roster</span>
                   <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: "rgba(255,255,255,0.05)", border: "1px solid var(--border)" }}>{participants.length}</span>
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 200, overflowY: "auto" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 180, overflowY: "auto" }}>
                   {participants.map((p) => (
-                    <div key={p._id} className="participant-item">
+                    <div key={p._id} className="roster-row">
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <span style={{ width: 6, height: 6, borderRadius: "50%", background: p.isOnline ? "var(--success)" : "var(--text-muted)" }} />
                         <span style={{ fontSize: 13, fontWeight: 500 }}>{p.name}</span>
@@ -340,42 +356,43 @@ const App = () => {
                     </div>
                   ))}
                 </div>
-              </GlassPanel>
+              </div>
 
-              {/* Glass settings customizer */}
-              <GlassPanel>
-                <span className="field-label" style={{ marginBottom: 12 }}>Aesthetics</span>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                  <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Grid Overlay</span>
-                  <AaveSwitch checked={gridEnabled} onChange={setGridEnabled} />
+              {/* Activity History Logs */}
+              <div className="panel-prem workspace-panel">
+                <span className="field-label" style={{ marginBottom: 10 }}>Session Log</span>
+                <div style={{ maxHeight: 110, overflowY: "auto" }}>
+                  {logs.length === 0 ? <p style={{ fontSize: 11, color: "var(--text-muted)" }}>Ready.</p> : logs.map((l) => (
+                    <div key={l.id} style={{ display: "flex", gap: 6, fontSize: 11, fontFamily: "monospace", marginBottom: 5 }}>
+                      <span style={{ color: "var(--text-muted)" }}>[{l.time.split(" ")[0]}]</span>
+                      <span style={{ color: "var(--text-main)", wordBreak: "break-all" }}>{l.text}</span>
+                    </div>
+                  ))}
                 </div>
-                <div style={{ marginBottom: 10 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}><span style={{ fontSize: 12, color: "var(--text-muted)" }}>Frost Level</span><span style={{ fontSize: 10, fontFamily: "monospace" }}>{frostLevel.toFixed(1)}px</span></div>
-                  <AaveSlider min={1.0} max={5.0} step={0.1} value={frostLevel} onChange={setFrostLevel} />
-                </div>
-              </GlassPanel>
+              </div>
             </div>
 
-            {/* Document Editor */}
-            <GlassPanel style={{ display: "flex", flexDirection: "column" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            {/* Document Editor Area */}
+            <div className="panel-prem workspace-panel" style={{ display: "flex", flexDirection: "column" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
                 <div>
-                  <span style={{ fontSize: 10, fontWeight: 600, color: "var(--text-muted)", letterSpacing: "0.06em" }}>SHARED DOCUMENT</span>
-                  <h2 style={{ fontSize: 20, fontWeight: 700, letterSpacing: "-0.02em", marginTop: 2 }}>Workspace Editor</h2>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.08em" }}>WORKSPACE BUFFER</span>
+                  <h2 style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.03em", marginTop: 2 }}>Shared Document Editor</h2>
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
-                  <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 6, background: "rgba(255,255,255,0.05)", border: "1px solid var(--border)", fontFamily: "monospace" }}>v{version}</span>
-                  <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 6, background: "rgba(255,255,255,0.05)", border: "1px solid var(--border)", fontFamily: "monospace" }}>{content.length} chars</span>
+                  <span className="version-chip" style={{ fontSize: 11, fontWeight: 700, padding: "4px 8px", borderRadius: 6, background: "rgba(255,255,255,0.05)", border: "1px solid var(--border)", fontFamily: "monospace" }}>v{version}</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, padding: "4px 8px", borderRadius: 6, background: "rgba(255,255,255,0.05)", border: "1px solid var(--border)", fontFamily: "monospace" }}>{content.length} chars</span>
                 </div>
               </div>
-              <div style={{ flex: 1, borderRadius: 12, border: "1px solid var(--border)", background: "rgba(0,0,0,0.4)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
-                <textarea ref={textareaRef} className="editor-pane" value={content} onChange={handleEdit} onSelect={handleSelect} onKeyUp={handleSelect} placeholder="// Type your shared buffer content here..." style={{ minHeight: "560px" }} />
+              <div style={{ flex: 1, borderRadius: 8, border: "1px solid var(--border)", background: "var(--panel-sunken)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+                <textarea ref={textareaRef} className="editor-textarea-prem" value={content} onChange={handleEdit} onSelect={handleSelect} onKeyUp={handleSelect} placeholder="// Collaborate in real-time..." style={{ minHeight: "560px" }} />
               </div>
-            </GlassPanel>
+            </div>
+
           </div>
         )}
 
-        {statusMessage && <div className="toast-minimal">{statusMessage}</div>}
+        {statusMessage && <div className="toast-prem">{statusMessage}</div>}
       </div>
     </div>
   );
