@@ -1,6 +1,8 @@
 
 import participantRepository from "./participant.repository.js";
 import roomRepository from "../room/room.repository.js";
+import { generateHostKey } from "../../shared/utils/generateHostKey.js";
+import { generateRoomCode } from "../../shared/utils/generateRoomCode.js";
 
 class ParticipantService {
   async getRoomParticipants(roomCode) {

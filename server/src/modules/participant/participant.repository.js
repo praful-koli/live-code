@@ -1,4 +1,3 @@
-
 import Participant from "./participant.model.js";
 
 class ParticipantRepository {
@@ -6,16 +5,25 @@ class ParticipantRepository {
     return Participant.create(data);
   }
 
-  async findById(id) {
-    return Participant.findById(id);
+  async findById(participantId) {
+    return Participant.findById(participantId);
+  }
+
+  async findByIdWithHostKey(participantId) {
+    return Participant.findById(participantId).select("+hostKey");
   }
 
   async findByRoomId(roomId) {
-    return Participant.find({ roomId }).select("-__v");
+    return Participant.find({
+      roomId,
+      isRemoved: false,
+    }).select("-hostKey -__v");
   }
 
-  async updateById(id, data) {
-    return Participant.findByIdAndUpdate(id, data, { new: true });
+  async updateById(participantId, data) {
+    return Participant.findByIdAndUpdate(participantId, data, {
+      new: true,
+    });
   }
 }
 

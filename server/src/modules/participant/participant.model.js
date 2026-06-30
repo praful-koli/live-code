@@ -24,14 +24,23 @@ const participantSchema = new mongoose.Schema(
       default: false,
     },
 
+    hostKey: {
+      type: String,
+      default: null,
+      select: false,
+    },
+
     isOnline: {
       type: Boolean,
       default: true,
+    },
+
+    isRemoved: {
+      type: Boolean,
+      default: false,
     },
   },
   { timestamps: true }
 );
 
-const Participant = mongoose.model("Participant", participantSchema);
-
-export default Participant;
+export default mongoose.model("Participant", participantSchema);
