@@ -2,7 +2,8 @@ import participantService from "../modules/participant/participant.service.js";
 
 export const roomSocket = (io, socket) => {
   socket.on("room:join", async ({ roomCode, participantId }) => {
-    console.log("room:join")
+    console.log("room:join");
+
     try {
       if (!roomCode || !participantId) {
         socket.emit("socket:error", {
@@ -16,16 +17,23 @@ export const roomSocket = (io, socket) => {
       socket.roomCode = roomCode;
       socket.participantId = participantId;
 
-      await participantService.updateSocket(participantId, socket.id);
+      const joinedParticipant = await participantService.updateSocket(
+        participantId,
+        socket.id,
+      );
 
       const participants =
         await participantService.getRoomParticipants(roomCode);
-      console.log("Sending participant:list",participants);
+
+      console.log("Sending participant:list", participants);
+
       io.to(roomCode).emit("participant:list", participants);
 
       socket.to(roomCode).emit("participant:joined", {
-        participantId,
-        message: "A participant joined the room",
+        participantId: joinedParticipant._id,
+        name: joinedParticipant.name,
+        isHost: joinedParticipant.isHost,
+        message: `${joinedParticipant.name} joined the room`,
       });
     } catch (error) {
       socket.emit("socket:error", {
@@ -40,7 +48,8 @@ export const roomSocket = (io, socket) => {
 
       if (!roomCode || !participantId) return;
 
-      await participantService.markOffline(participantId);
+      const leftParticipant =
+        await participantService.markOffline(participantId);
 
       const participants =
         await participantService.getRoomParticipants(roomCode);
@@ -50,8 +59,10 @@ export const roomSocket = (io, socket) => {
       io.to(roomCode).emit("participant:list", participants);
 
       socket.to(roomCode).emit("participant:left", {
-        participantId,
-        message: "A participant left the room",
+        participantId: leftParticipant._id,
+        name: leftParticipant.name,
+        isHost: leftParticipant.isHost,
+        message: `${leftParticipant.name} left the room`,
       });
     } catch (error) {
       socket.emit("socket:error", {
@@ -66,12 +77,20 @@ export const roomSocket = (io, socket) => {
 
       if (!roomCode || !participantId) return;
 
-      await participantService.markOffline(participantId);
+      const disconnectedParticipant =
+        await participantService.markOffline(participantId);
 
       const participants =
         await participantService.getRoomParticipants(roomCode);
 
       io.to(roomCode).emit("participant:list", participants);
+
+      socket.to(roomCode).emit("participant:left", {
+        participantId: disconnectedParticipant._id,
+        name: disconnectedParticipant.name,
+        isHost: disconnectedParticipant.isHost,
+        message: `${disconnectedParticipant.name} disconnected`,
+      });
 
       console.log("Socket disconnected:", socket.id);
     } catch (error) {
