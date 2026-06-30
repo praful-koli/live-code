@@ -2,6 +2,7 @@
 import roomRepository from "./room.repository.js";
 import participantRepository from "../participant/participant.repository.js";
 import { generateRoomCode } from "../../shared/utils/generate-room-code.js";
+import ApiError from "../../shared/error/ApiError.js";
 
 class RoomService {
   async createRoom({ roomName, hostName }) {
@@ -71,6 +72,16 @@ class RoomService {
     }
 
     return roomRepository.updateById(room._id, { isClosed: true });
+  }
+
+  async getRoom(roomCode) {
+    const room = await roomRepository.findByRoomCode(roomCode);
+
+    if (!room) {
+      throw ApiError.notFound('Room not Found')
+    }
+
+    return room
   }
 }
 

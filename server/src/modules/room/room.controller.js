@@ -28,7 +28,13 @@ class RoomController {
       participantId: req.body.participantId,
     });
 
-    ApiResponse.ok(data, "Room close successfully").send(res)
+    ApiResponse.ok(data, "Room close successfully").send(res);
+  }
+
+  async getRoom(req, res) {
+    const data = await roomService.getRoom(req.params.roomCode);
+
+    ApiResponse.ok(data, "Room fetch successfully").send(res);
   }
 }
 

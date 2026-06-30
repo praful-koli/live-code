@@ -10,6 +10,8 @@ router.post('/join' , asyncHandler(roomController.joinRoom.bind(roomController))
 
 router.patch('/:roomCode/rename' , asyncHandler(roomController.renameRoom.bind(roomController)) )
 
+router.get("/:roomCode", asyncHandler(roomController.getRoom.bind(roomController)));
+
 router.delete('/:roomCode/delete',asyncHandler(roomController.closeRoom.bind(roomController)))
 
 export default router
