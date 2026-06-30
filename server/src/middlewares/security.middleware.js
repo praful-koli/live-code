@@ -22,10 +22,22 @@ const SecurityMiddleware = (app) => {
 	app.use(
 		cors({
 			origin: (origin, callback) => {
-				if (!origin || allowedOrigins.includes(origin) || config.NODE_ENV !== "production") {
+				const isLocalhost = origin && /^https?:\/\/localhost(:\d+)?$/.test(origin);
+				const isVercel = origin && /^https:\/\/live-code-.*\.vercel\.app$/.test(origin);
+				const isVercelShort = origin && origin === "https://live-code.vercel.app";
+
+				if (
+					!origin ||
+					allowedOrigins.includes(origin) ||
+					isLocalhost ||
+					isVercel ||
+					isVercelShort ||
+					config.NODE_ENV !== "production"
+				) {
 					callback(null, true);
 				} else {
-					callback(new Error("Not allowed by CORS"));
+					logger.warn(`CORS blocked for origin: ${origin}`);
+					callback(null, false);
 				}
 			},
 			credentials: true,
@@ -35,3 +47,4 @@ const SecurityMiddleware = (app) => {
 };
 
 export default SecurityMiddleware;
+

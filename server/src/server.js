@@ -10,13 +10,35 @@ const app = createApp();
 
 const httpServer = http.createServer(app);
 
-const origins = ["http://localhost:5173", "http://localhost:5174", "http://localhost:3000"];
-if (env.CLIENT_URL) origins.push(env.CLIENT_URL);
-if (env.CLIENT_URL_PROD) origins.push(env.CLIENT_URL_PROD);
-
 const io = new Server(httpServer, {
   cors: {
-    origin: origins,
+    origin: (origin, callback) => {
+      const allowedOrigins = [
+        env.CLIENT_URL,
+        env.CLIENT_URL_PROD,
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:3000",
+      ].filter(Boolean);
+
+      const isLocalhost = origin && /^https?:\/\/localhost(:\d+)?$/.test(origin);
+      const isVercel = origin && /^https:\/\/live-code-.*\.vercel\.app$/.test(origin);
+      const isVercelShort = origin && origin === "https://live-code.vercel.app";
+
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        isLocalhost ||
+        isVercel ||
+        isVercelShort ||
+        env.NODE_ENV !== "production"
+      ) {
+        callback(null, true);
+      } else {
+        logger.warn(`Socket CORS blocked for origin: ${origin}`);
+        callback(null, false);
+      }
+    },
     methods: ["GET", "POST", "PATCH", "DELETE", "PUT"],
     credentials: true,
   },
