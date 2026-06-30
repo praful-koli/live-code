@@ -11,14 +11,17 @@ const ROOM_EVENTS = {
   ROOM_PARTICIPANTS: "room-participants",
   USER_TYPING: "user-typing",
   USER_STOPPED_TYPING: "user-stopped-typing",
+  USER_CURSOR: "user-cursor",
   PRESENCE_UPDATE: "presence-update",
 };
 
-const buildParticipantPayload = ({ userId, name, socketId, isTyping }) => ({
+const buildParticipantPayload = ({ userId, name, socketId, isTyping, isEditing, cursorPosition }) => ({
   userId,
   name,
   socketId,
   isTyping: Boolean(isTyping),
+  isEditing: Boolean(isEditing),
+  cursorPosition: cursorPosition ?? null,
 });
 
 const emitParticipantList = (io, roomCode) => {
@@ -26,6 +29,8 @@ const emitParticipantList = (io, roomCode) => {
     userId: participant.userId,
     name: participant.name,
     isTyping: participant.isTyping || false,
+    isEditing: participant.isEditing || false,
+    cursorPosition: participant.cursorPosition ?? null,
   }));
   io.to(roomCode).emit(ROOM_EVENTS.ROOM_PARTICIPANTS, { participants });
 };
@@ -47,6 +52,8 @@ export const registerSocketHandlers = (io, socket) => {
       userId,
       name,
       isTyping: false,
+      isEditing: false,
+      cursorPosition: null,
     });
 
     emitParticipantList(io, joinedRoomCode);
@@ -74,12 +81,34 @@ export const registerSocketHandlers = (io, socket) => {
     emitParticipantList(io, joinedRoomCode);
   });
 
+  socket.on(ROOM_EVENTS.USER_CURSOR, (payload) => {
+    if (!joinedRoomCode) return;
+    const cursorPosition = payload?.cursorPosition;
+    if (cursorPosition == null) return;
+
+    const roomParticipants = getRoomParticipants(joinedRoomCode);
+    const participant = roomParticipants.find((item) => item.socketId === socket.id);
+    if (!participant) return;
+
+    participant.isEditing = true;
+    participant.cursorPosition = cursorPosition;
+    io.to(joinedRoomCode).emit(ROOM_EVENTS.PRESENCE_UPDATE, {
+      userId: participant.userId,
+      name: participant.name,
+      status: "editing",
+      cursorPosition,
+    });
+    emitParticipantList(io, joinedRoomCode);
+  });
+
   socket.on(ROOM_EVENTS.USER_STOPPED_TYPING, () => {
     if (!joinedRoomCode) return;
     const roomParticipants = getRoomParticipants(joinedRoomCode);
     const participant = roomParticipants.find((item) => item.socketId === socket.id);
     if (!participant) return;
     participant.isTyping = false;
+    participant.isEditing = false;
+    participant.cursorPosition = null;
     io.to(joinedRoomCode).emit(ROOM_EVENTS.PRESENCE_UPDATE, {
       userId: participant.userId,
       name: participant.name,
