@@ -16,10 +16,8 @@ const roomSchema = new mongoose.Schema(
       trim: true,
     },
 
-    hostName: {
+    hostNmae: {
       type: String,
-      required: true,
-      trim: true,
     },
 
     hostParticipantId: {
@@ -38,9 +36,7 @@ const roomSchema = new mongoose.Schema(
       default: false,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-const Room = mongoose.model("Room", roomSchema);
-
-export default Room;
+export default mongoose.model("Room", roomSchema);
