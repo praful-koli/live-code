@@ -21,19 +21,19 @@
 }
 
 body.light-theme {
-  --bg: #f9fafb;
+  --bg: #f1f5f9;
   --bg-right: #2563eb;
   --panel: #ffffff;
-  --panel-raised: #f3f4f6;
-  --panel-sunken: #f9fafb;
-  --text-main: #111827;
-  --text-muted: #6b7280;
+  --panel-raised: #f8fafc;
+  --panel-sunken: #e2e8f0;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
   --accent: #2563eb;
   --accent-soft: rgba(37, 99, 235, 0.1);
-  --success: #16a34a;
-  --danger: #dc2626;
-  --border: rgba(0, 0, 0, 0.08);
-  --border-focus: rgba(0, 0, 0, 0.2);
+  --success: #10b981;
+  --danger: #ef4444;
+  --border: rgba(15, 23, 42, 0.08);
+  --border-focus: rgba(15, 23, 42, 0.15);
 }
 
 * {

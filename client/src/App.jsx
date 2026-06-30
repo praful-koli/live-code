@@ -14,6 +14,7 @@ const App = () => {
   const [displayName, setDisplayName] = useState("");
   const [joined, setJoined] = useState(false);
   const [isHost, setIsHost] = useState(false);
+  const [hostKey, setHostKey] = useState("");
   const [participantId, setParticipantId] = useState("");
   const [participants, setParticipants] = useState([]);
   const [typingUsers, setTypingUsers] = useState([]);
@@ -36,7 +37,6 @@ const App = () => {
     onCancel: null
   });
 
-  const visualSideRef = useRef(null);
   const tabContentRef = useRef(null);
   const sliderIndicatorRef = useRef(null);
   const textareaRef = useRef(null);
@@ -66,22 +66,27 @@ const App = () => {
         { x: -30, opacity: 0 }, 
         { x: 0, opacity: 1, duration: 0.6, ease: "power3.out" }
       );
-      // Floating animations for visual elements on the right
-      gsap.fromTo(".float-element-1", { y: -10 }, { y: 10, duration: 2.2, ease: "sine.inOut", yoyo: true, repeat: -1 });
-      gsap.fromTo(".float-element-2", { y: 8 }, { y: -8, duration: 2.8, ease: "sine.inOut", yoyo: true, repeat: -1 });
-      gsap.fromTo(".float-element-3", { y: -12 }, { y: 12, duration: 2.5, ease: "sine.inOut", yoyo: true, repeat: -1 });
+      // Clean, single-shot entrance animation for the visual side cards (no infinite yoyo loops)
+      gsap.fromTo(".floating-card", 
+        { y: 30, opacity: 0 }, 
+        { y: 0, opacity: 1, duration: 0.8, ease: "power3.out", stagger: 0.12 }
+      );
     }
   }, [joined]);
 
-  // Dynamic Cursor tilt effect on Right Side Visual Panel
-  const handleMouseMove = (e) => {
-    if (!visualSideRef.current) return;
-    const rect = visualSideRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left - rect.width / 2;
-    const y = e.clientY - rect.top - rect.height / 2;
-    gsap.to(".float-element-1", { x: x * 0.08, y: y * 0.08, rotateX: -y * 0.03, rotateY: x * 0.03, duration: 0.5 });
-    gsap.to(".float-element-2", { x: x * -0.05, y: y * -0.05, rotateX: y * 0.02, rotateY: -x * 0.02, duration: 0.5 });
-    gsap.to(".float-element-3", { x: x * 0.04, y: y * 0.04, rotateX: -y * 0.015, rotateY: x * 0.015, duration: 0.5 });
+  // Hover animation handlers using GSAP
+  const handleCardHoverIn = (e) => {
+    gsap.to(e.currentTarget, { y: -8, scale: 1.04, boxShadow: "0 20px 40px rgba(0,0,0,0.15)", duration: 0.3, ease: "power2.out" });
+  };
+  const handleCardHoverOut = (e) => {
+    gsap.to(e.currentTarget, { y: 0, scale: 1, boxShadow: "0 4px 20px rgba(0,0,0,0.05)", duration: 0.3, ease: "power2.out" });
+  };
+
+  const handleDarkCardHoverIn = (e) => {
+    gsap.to(e.currentTarget, { y: -8, scale: 1.04, boxShadow: "0 20px 40px rgba(0,0,0,0.4)", duration: 0.3, ease: "power2.out" });
+  };
+  const handleDarkCardHoverOut = (e) => {
+    gsap.to(e.currentTarget, { y: 0, scale: 1, boxShadow: "0 4px 20px rgba(0,0,0,0.2)", duration: 0.3, ease: "power2.out" });
   };
 
   // Custom Modal helper functions to replace browser native popups
@@ -173,8 +178,16 @@ const App = () => {
 
   useEffect(() => {
     const c = localStorage.getItem("cr_code"), n = localStorage.getItem("cr_name"),
-      p = localStorage.getItem("cr_pid"), h = localStorage.getItem("cr_host") === "true";
-    if (c && n && p) { setRoomCode(c); setDisplayName(n); setParticipantId(p); setIsHost(h); joinSession(c, p, n); }
+      p = localStorage.getItem("cr_pid"), h = localStorage.getItem("cr_host") === "true",
+      hk = localStorage.getItem("cr_hkey") || "";
+    if (c && n && p) {
+      setRoomCode(c);
+      setDisplayName(n);
+      setParticipantId(p);
+      setIsHost(h);
+      if (hk) setHostKey(hk);
+      joinSession(c, p, n);
+    }
   }, []);
 
   useEffect(() => {
@@ -222,11 +235,21 @@ const App = () => {
     };
   }, []);
 
-  // hostAct Helper (using custom triggerAlert modal instead of native alert)
+  // hostAct Helper (passing headers for cross-origin reliability)
   const hostAct = async (url, method = "PATCH", body) => {
     try {
-      const o = { method, credentials: "include" };
-      if (body) { o.headers = { "Content-Type": "application/json" }; o.body = JSON.stringify(body); }
+      const o = {
+        method,
+        credentials: "include",
+        headers: {
+          "x-participant-id": participantId,
+          "x-host-key": hostKey || localStorage.getItem("cr_hkey") || ""
+        }
+      };
+      if (body) {
+        o.headers["Content-Type"] = "application/json";
+        o.body = JSON.stringify(body);
+      }
       const r = await (await fetch(url, o)).json();
       if (!r.success) throw new Error(r.message);
       return r;
@@ -250,8 +273,17 @@ const App = () => {
     setJoined(true); log("Session initialized");
   };
 
-  const save = (c, n, p, h) => { localStorage.setItem("cr_code", c); localStorage.setItem("cr_name", n); localStorage.setItem("cr_pid", p); localStorage.setItem("cr_host", String(h)); };
-  const clear = () => { ["cr_code", "cr_name", "cr_pid", "cr_host"].forEach((k) => localStorage.removeItem(k)); };
+  const save = (c, n, p, h, hk) => {
+    localStorage.setItem("cr_code", c);
+    localStorage.setItem("cr_name", n);
+    localStorage.setItem("cr_pid", p);
+    localStorage.setItem("cr_host", String(h));
+    if (hk) localStorage.setItem("cr_hkey", hk);
+  };
+  const clear = () => {
+    ["cr_code", "cr_name", "cr_pid", "cr_host", "cr_hkey"].forEach((k) => localStorage.removeItem(k));
+    setHostKey("");
+  };
 
   const handleCreate = async () => {
     if (!roomName.trim() || !displayName.trim()) return setStatusMessage("Required fields are empty");
@@ -259,8 +291,8 @@ const App = () => {
       setStatusMessage("Provisioning...");
       const r = await (await fetch(`${API}/create`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ roomName: roomName.trim(), hostName: displayName.trim() }) })).json();
       if (!r.success) throw new Error(r.message);
-      setRoomCode(r.data.room.roomCode); setParticipantId(r.data.participant._id); setIsHost(true);
-      save(r.data.room.roomCode, r.data.participant.name, r.data.participant._id, true);
+      setRoomCode(r.data.room.roomCode); setParticipantId(r.data.participant._id); setIsHost(true); setHostKey(r.data.hostKey);
+      save(r.data.room.roomCode, r.data.participant.name, r.data.participant._id, true, r.data.hostKey);
       joinSession(r.data.room.roomCode, r.data.participant._id, r.data.participant.name); setStatusMessage("");
     } catch (e) { setStatusMessage(e.message); }
   };
@@ -280,7 +312,7 @@ const App = () => {
         return;
       }
       setParticipantId(r.data.participant._id); setIsHost(false);
-      save(r.data.room.roomCode, r.data.participant.name, r.data.participant._id, false);
+      save(r.data.room.roomCode, r.data.participant.name, r.data.participant._id, false, "");
       joinSession(r.data.room.roomCode, r.data.participant._id, r.data.participant.name); setStatusMessage("");
     } catch (e) { setStatusMessage(e.message); }
   };
@@ -381,11 +413,16 @@ const App = () => {
             </div>
           </div>
 
-          {/* Right Visual side (Tilt elements relative to cursor) */}
-          <div ref={visualSideRef} className="visual-side" onMouseMove={handleMouseMove}>
+          {/* Right Visual side (GSAP Hover reactive visual cards) */}
+          <div className="visual-side">
             
             {/* SVG Interactive code card */}
-            <div className="floating-card float-element-1" style={{ top: "15%", left: "15%", width: 280 }}>
+            <div 
+              className="floating-card float-element-1" 
+              style={{ top: "15%", left: "15%", width: 280 }}
+              onMouseEnter={handleCardHoverIn}
+              onMouseLeave={handleCardHoverOut}
+            >
               <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
                 <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#ef4444" }} />
                 <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#eab308" }} />
@@ -397,24 +434,54 @@ const App = () => {
               </p>
             </div>
 
-            {/* SVG Users indicator bubble */}
-            <div className="floating-card float-element-2" style={{ top: "45%", right: "12%", width: 220, background: "#111827", color: "#f3f4f6" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#10b981" }} />
+            {/* SVG Interactive Mesh Topology card */}
+            <div 
+              className="floating-card float-element-2" 
+              style={{ top: "45%", right: "12%", width: 240, background: "rgba(15, 23, 42, 0.8)", backdropFilter: "blur(12px)", border: "1px solid rgba(255, 255, 255, 0.08)", color: "#f3f4f6", padding: 14 }}
+              onMouseEnter={handleDarkCardHoverIn}
+              onMouseLeave={handleDarkCardHoverOut}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <svg width="36" height="36" viewBox="0 0 40 40" style={{ flexShrink: 0 }}>
+                  <circle cx="20" cy="8" r="4.5" fill="#3b82f6" />
+                  <circle cx="10" cy="30" r="4.5" fill="#10b981" />
+                  <circle cx="30" cy="30" r="4.5" fill="#6366f1" />
+                  <circle cx="20" cy="22" r="3.5" fill="#f59e0b" />
+                  <line x1="20" y1="8" x2="10" y2="30" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" strokeDasharray="3 3" />
+                  <line x1="20" y1="8" x2="30" y2="30" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" strokeDasharray="3 3" />
+                  <line x1="10" y1="30" x2="30" y2="30" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" strokeDasharray="3 3" />
+                  <line x1="20" y1="22" x2="20" y2="8" stroke="rgba(255,255,255,0.25)" strokeWidth="1.2" />
+                  <line x1="20" y1="22" x2="10" y2="30" stroke="rgba(255,255,255,0.25)" strokeWidth="1.2" />
+                  <line x1="20" y1="22" x2="30" y2="30" stroke="rgba(255,255,255,0.25)" strokeWidth="1.2" />
+                </svg>
                 <div>
-                  <p style={{ fontSize: 13, fontWeight: 700 }}>3 Active Members</p>
-                  <p style={{ fontSize: 11, color: "#9ca3af" }}>Real-time synched</p>
+                  <p style={{ fontSize: 13, fontWeight: 700, margin: 0, letterSpacing: "-0.01em" }}>Mesh Topology</p>
+                  <p style={{ fontSize: 11, color: "#9ca3af", margin: "2px 0 0 0" }}>Active Peer Protocol</p>
                 </div>
               </div>
             </div>
 
-            {/* SVG Play cursor indicator */}
-            <div className="floating-card float-element-3" style={{ bottom: "18%", left: "20%", padding: 12 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <svg style={{ width: 16, height: 16, fill: "#2563eb" }} viewBox="0 0 24 24">
-                  <path d="M7 2v20l5.828-5.828L19 22l3-3-5.828-5.828L22 7H7z" />
+            {/* SVG Conflict Resolver/Git Merge card */}
+            <div 
+              className="floating-card float-element-3" 
+              style={{ bottom: "18%", left: "20%", width: 230, padding: 14, background: "rgba(15, 23, 42, 0.8)", backdropFilter: "blur(12px)", border: "1px solid rgba(255, 255, 255, 0.08)", color: "#f3f4f6" }}
+              onMouseEnter={handleDarkCardHoverIn}
+              onMouseLeave={handleDarkCardHoverOut}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <line x1="6" y1="3" x2="6" y2="15" />
+                  <circle cx="18" cy="6" r="3" stroke="#818cf8" />
+                  <circle cx="6" cy="18" r="3" />
+                  <path d="M18 9a9 9 0 0 1-9 9" stroke="#818cf8" strokeDasharray="3 3" />
                 </svg>
-                <span style={{ fontSize: 12, fontWeight: 600 }}>Alice typing...</span>
+                <div>
+                  <p style={{ fontSize: 13, fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
+                    Delta Resolver
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#10b981", display: "inline-block" }} />
+                  </p>
+                  <p style={{ fontSize: 11, color: "#9ca3af", margin: "2px 0 0 0" }}>Merged conflict-free</p>
+                </div>
               </div>
             </div>
 
@@ -507,7 +574,6 @@ const App = () => {
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         {typingUsers.includes(p.name) && <span style={{ fontSize: 9, color: "var(--accent)", fontWeight: 600 }}>typing</span>}
-                        {editingUsers[p._id] && <span style={{ fontSize: 9, color: "var(--text-muted)" }}>@{editingUsers[p._id].pos}</span>}
                         {isHost && !p.isHost && <button className="kick-btn-min" onClick={() => {
                           triggerConfirm("Remove Participant", `Remove ${p.name}?`, () => {
                             hostAct(`${API}/${roomCode.toUpperCase()}/participants/${p._id}`, "DELETE");
@@ -519,18 +585,6 @@ const App = () => {
                 </div>
               </div>
 
-              {/* Activity History Logs */}
-              <div className="panel-prem workspace-panel">
-                <span className="field-label" style={{ marginBottom: 10 }}>Session Log</span>
-                <div style={{ maxHeight: 110, overflowY: "auto" }}>
-                  {logs.length === 0 ? <p style={{ fontSize: 11, color: "var(--text-muted)" }}>Ready.</p> : logs.map((l) => (
-                    <div key={l.id} style={{ display: "flex", gap: 6, fontSize: 11, fontFamily: "monospace", marginBottom: 5 }}>
-                      <span style={{ color: "var(--text-muted)" }}>[{l.time.split(" ")[0]}]</span>
-                      <span style={{ color: "var(--text-main)", wordBreak: "break-all" }}>{l.text}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
 
             {/* Document Editor Area */}
