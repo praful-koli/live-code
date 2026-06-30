@@ -23,7 +23,7 @@ class RoomService {
     const room = await roomRepository.create({
       roomCode,
       roomName,
-      hostName
+      hostName,
     });
 
     const hostParticipant = await participantRepository.create({
@@ -52,25 +52,25 @@ class RoomService {
 
   async joinRoom({ roomCode, name }) {
     if (!roomCode) {
-      throw  ApiError.badRequest("Room code is required");
+      throw ApiError.badRequest("Room code is required");
     }
 
     if (!name) {
-      throw  ApiError.badRequest("Name is required");
+      throw ApiError.badRequest("Name is required");
     }
 
     const room = await roomRepository.findByRoomCode(roomCode);
 
     if (!room) {
-      throw  ApiError.badRequest("Invalid room code");
+      throw ApiError.badRequest("Invalid room code");
     }
 
     if (room.isClosed) {
-      throw  ApiError.badRequest("Room is closed");
+      throw ApiError.badRequest("Room is closed");
     }
 
     if (room.isLocked) {
-      throw  ApiError.badRequest("Room is locked");
+      throw ApiError.badRequest("Room is locked");
     }
 
     const participant = await participantRepository.create({
@@ -98,16 +98,15 @@ class RoomService {
   }
 
   async checkHost({ participantId, hostKey }) {
-    const participant = await participantRepository.findByIdWithHostKey(
-      participantId
-    );
-     console.log(participantId)
+    const participant =
+      await participantRepository.findByIdWithHostKey(participantId);
+    console.log(participantId);
     if (!participant) {
-      throw  ApiError.notFound("Participant not found");
+      throw ApiError.notFound("Participant not found");
     }
 
     if (!participant.isHost) {
-      throw  ApiError.unauthorized("Only host can perform this action");
+      throw ApiError.unauthorized("Only host can perform this action");
     }
 
     if (participant.hostKey !== hostKey) {
@@ -117,86 +116,76 @@ class RoomService {
     return participant;
   }
 
-  async renameRoom({ roomCode, participantId, hostKey, roomName }) {
+  async renameRoom({ roomCode, roomName, hostParticipant }) {
     if (!roomName) {
-      throw  ApiError.badRequest("Room name is required");
+      throw ApiError.badRequest("Room name is required");
     }
 
     const room = await roomRepository.findByRoomCode(roomCode);
 
     if (!room) {
-      throw  ApiError.notFound("Room not found");
+      throw ApiError.notFound("Room not found");
     }
-
-    await this.checkHost({ participantId, hostKey });
 
     return roomRepository.updateById(room._id, {
       roomName,
     });
   }
 
-  async closeRoom({ roomCode, participantId, hostKey }) {
+  async closeRoom({ roomCode }) {
     const room = await roomRepository.findByRoomCode(roomCode);
 
     if (!room) {
-      throw  ApiError.notFound("Room not found");
+      throw ApiError.notFound("Room not found");
     }
-
-    await this.checkHost({ participantId, hostKey });
 
     return roomRepository.updateById(room._id, {
       isClosed: true,
     });
   }
 
-  async lockRoom({ roomCode, participantId, hostKey }) {
+  async lockRoom({ roomCode }) {
     const room = await roomRepository.findByRoomCode(roomCode);
 
     if (!room) {
-      throw  ApiError.notFound("Room not found");
+      throw ApiError.notFound("Room not found");
     }
 
-    await this.checkHost({ participantId, hostKey });
 
     return roomRepository.updateById(room._id, {
       isLocked: true,
     });
   }
 
-  async unlockRoom({ roomCode, participantId, hostKey }) {
+  async unlockRoom({ roomCode }) {
     const room = await roomRepository.findByRoomCode(roomCode);
 
     if (!room) {
-      throw  ApiError.notFound("Room not found");
+      throw ApiError.notFound("Room not found");
     }
-
-    await this.checkHost({ participantId, hostKey });
 
     return roomRepository.updateById(room._id, {
       isLocked: false,
     });
   }
 
-  async removeParticipant({ roomCode, participantId, hostParticipantId, hostKey }) {
+  async removeParticipant({
+    roomCode,
+    participantId,
+  }) {
     const room = await roomRepository.findByRoomCode(roomCode);
 
     if (!room) {
-      throw  ApiError.notFound("Room not found");
+      throw ApiError.notFound("Room not found");
     }
 
-    await this.checkHost({
-      participantId: hostParticipantId,
-      hostKey,
-    });
-
-    
     const participant = await participantRepository.findById(participantId);
     if (!participant) {
-      throw  ApiError.notFound("Participant not found");
+      throw ApiError.notFound("Participant not found");
     }
 
     if (participant.isHost) {
-      throw  ApiError.badRequest("Host cannot remove himself");
+      throw ApiError.badRequest("Host cannot remove himself");
     }
 
     return participantRepository.updateById(participantId, {
