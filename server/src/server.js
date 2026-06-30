@@ -10,9 +10,13 @@ const app = createApp();
 
 const httpServer = http.createServer(app);
 
+const origins = ["http://localhost:5173", "http://localhost:5174", "http://localhost:3000"];
+if (env.CLIENT_URL) origins.push(env.CLIENT_URL);
+if (env.CLIENT_URL_PROD) origins.push(env.CLIENT_URL_PROD);
+
 const io = new Server(httpServer, {
   cors: {
-    origin: ["http://localhost:5173", "http://localhost:5174", "http://localhost:3000"],
+    origin: origins,
     methods: ["GET", "POST", "PATCH", "DELETE", "PUT"],
     credentials: true,
   },
