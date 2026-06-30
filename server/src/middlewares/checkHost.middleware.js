@@ -2,14 +2,14 @@ import participantRepository from "../modules/participant/participant.repository
 import ApiError from "../shared/error/ApiError.js";
 export const checkHost = async (req, res, next) => {
   try {
-    const { participantId, hostKey } = req.cookies;
+    const participantId = req.headers["x-participant-id"] || req.cookies.participantId || req.body.participantId || req.query.participantId;
+    const hostKey = req.headers["x-host-key"] || req.cookies.hostKey || req.body.hostKey || req.query.hostKey;
 
     if (!participantId || !hostKey) {
       return res.status(401).json({
         success: false,
         message: "Host authentication required",
       });
-    
     }
 
     const participant =

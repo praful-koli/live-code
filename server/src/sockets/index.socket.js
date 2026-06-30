@@ -1,5 +1,6 @@
 import { roomSocket } from "./room.socket.js";
 import { presenceSocket } from "./presence.socket.js";
+import { documentSocket } from "./document.socket.js";
 
 export const initializeSocket = (io) => {
   io.on("connection", (socket) => {
@@ -7,5 +8,6 @@ export const initializeSocket = (io) => {
 
     roomSocket(io, socket);
     presenceSocket(io, socket);
+    documentSocket(io, socket);
   });
 };

@@ -40,7 +40,6 @@ router.patch(
 
 router.delete(
   "/:roomCode/delete",
-  checkHost,
   asyncHandler(roomController.closeRoom.bind(roomController)),
 );
 

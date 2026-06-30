@@ -1,5 +1,6 @@
 import roomRepository from "./room.repository.js";
 import participantRepository from "../participant/participant.repository.js";
+import documentRepository from "../document/document.repository.js";
 import { generateRoomCode } from "../../shared/utils/generateRoomCode.js";
 import { generateHostKey } from "../../shared/utils/generateHostKey.js";
 import ApiError from "../../shared/error/ApiError.js";
@@ -36,6 +37,9 @@ class RoomService {
 
     room.hostParticipantId = hostParticipant._id;
     await room.save();
+
+    // Auto-create an empty document for this room
+    await documentRepository.create({ roomId: room._id });
 
     return {
       room,
