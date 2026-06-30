@@ -1,13 +1,14 @@
-
 import participantRepository from "./participant.repository.js";
 import roomRepository from "../room/room.repository.js";
-import { generateHostKey } from "../../shared/utils/generateHostKey.js";
-import { generateRoomCode } from "../../shared/utils/generateRoomCode.js";
+import ApiError from "../../shared/error/ApiError.js";
 
 class ParticipantService {
   async getRoomParticipants(roomCode) {
     const room = await roomRepository.findByRoomCode(roomCode);
-    if (!room) throw new Error("Room not found");
+
+    if (!room) {
+      throw new ApiError.notFound("Room not found");
+    }
 
     return participantRepository.findByRoomId(room._id);
   }
