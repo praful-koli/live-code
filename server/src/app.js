@@ -11,7 +11,7 @@ const createApp = () => {
 	app.get("/", (_, res) => {
 		res.send("Backend is running!!!");
 	});
-	app.use("/api/v1", indexRoutes);
+	app.use("/api", indexRoutes);
 	app.use(ErrorMiddleware);
 
 	return app;
