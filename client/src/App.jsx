@@ -18,6 +18,8 @@ const App = () => {
   const [statusMessage, setStatusMessage] = useState("");
   const [typingUsers, setTypingUsers] = useState([]);
   const [message, setMessage] = useState("");
+  const [isConnected, setIsConnected] = useState(socket.connected);
+  const [socketStatus, setSocketStatus] = useState(socket.connected ? "connected" : "disconnected");
 
   useEffect(() => {
     const handleParticipants = (payload) => {
@@ -42,12 +44,37 @@ const App = () => {
       }
     };
 
+    const handleConnected = () => {
+      setIsConnected(true);
+      setSocketStatus("connected");
+      setStatusMessage("Realtime server connected.");
+    };
+
+    const handleDisconnected = (reason) => {
+      setIsConnected(false);
+      setSocketStatus("disconnected");
+      setStatusMessage(`Disconnected from realtime server: ${reason}`);
+      setTypingUsers([]);
+    };
+
+    const handleConnectError = () => {
+      setIsConnected(false);
+      setSocketStatus("connect error");
+      setStatusMessage("Unable to connect to realtime server.");
+    };
+
     socket.on(ROOM_EVENTS.ROOM_PARTICIPANTS, handleParticipants);
     socket.on(ROOM_EVENTS.PRESENCE_UPDATE, handlePresence);
+    socket.on("connect", handleConnected);
+    socket.on("disconnect", handleDisconnected);
+    socket.on("connect_error", handleConnectError);
 
     return () => {
       socket.off(ROOM_EVENTS.ROOM_PARTICIPANTS, handleParticipants);
       socket.off(ROOM_EVENTS.PRESENCE_UPDATE, handlePresence);
+      socket.off("connect", handleConnected);
+      socket.off("disconnect", handleDisconnected);
+      socket.off("connect_error", handleConnectError);
     };
   }, []);
 
@@ -77,6 +104,7 @@ const App = () => {
 
   const handleLeave = () => {
     socket.emit(ROOM_EVENTS.LEAVE_ROOM);
+    socket.disconnect();
     setJoined(false);
     setParticipants([]);
     setTypingUsers([]);
@@ -96,8 +124,17 @@ const App = () => {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4">
       <div className="mx-auto max-w-3xl rounded-2xl bg-slate-900 p-6 shadow-xl shadow-slate-900/20">
-        <h1 className="text-3xl font-semibold text-cyan-300">Realtime Code Room</h1>
-        <p className="mt-2 text-slate-400">Join a room to see participants and presence updates.</p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-3xl font-semibold text-cyan-300">Realtime Code Room</h1>
+            <p className="mt-2 text-slate-400">Join a room to see participants and presence updates.</p>
+          </div>
+          <span
+            className={`rounded-full px-3 py-1 text-sm ${isConnected ? "bg-emerald-500/15 text-emerald-300" : "bg-rose-500/15 text-rose-300"}`}
+          >
+            {socketStatus}
+          </span>
+        </div>
 
         {!joined ? (
           <div className="mt-6 space-y-4">
