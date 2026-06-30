@@ -3,19 +3,37 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #070809;
+  /* Default: Dark Theme */
+  --bg: #08090b;
+  --bg-right: #1d4ed8; /* Premium Cobalt Blue */
   --panel: #111215;
   --panel-raised: #18191d;
   --panel-sunken: #0c0d10;
   --text-main: #f3f4f6;
-  --text-muted: #79808d;
-  --accent: #5c82a6;
-  --accent-soft: rgba(92, 130, 166, 0.12);
+  --text-muted: #838a97;
+  --accent: #3b82f6;
+  --accent-soft: rgba(59, 130, 246, 0.15);
   --success: #52a874;
-  --danger: #cf6666;
+  --danger: #e06c75;
   --border: rgba(255, 255, 255, 0.05);
   --border-focus: rgba(255, 255, 255, 0.15);
   --radius: 12px;
+}
+
+body.light-theme {
+  --bg: #f9fafb;
+  --bg-right: #2563eb;
+  --panel: #ffffff;
+  --panel-raised: #f3f4f6;
+  --panel-sunken: #f9fafb;
+  --text-main: #111827;
+  --text-muted: #6b7280;
+  --accent: #2563eb;
+  --accent-soft: rgba(37, 99, 235, 0.1);
+  --success: #16a34a;
+  --danger: #dc2626;
+  --border: rgba(0, 0, 0, 0.08);
+  --border-focus: rgba(0, 0, 0, 0.2);
 }
 
 * {
@@ -31,35 +49,57 @@ body {
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
   overflow-x: hidden;
-  position: relative;
+  transition: background-color 0.3s, color 0.3s;
 }
 
-/* Background interactive coordinate canvas */
-.canvas-bg {
+/* Splitscreen Layout */
+.splitscreen-container {
+  display: grid;
+  grid-template-columns: 55% 45%;
+  min-height: 100vh;
+  width: 100vw;
+}
+
+.form-side {
+  padding: 40px 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.visual-side {
+  background-color: var(--bg-right);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Custom modal styling */
+.modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
-  z-index: -1;
-  opacity: 0.15;
-  pointer-events: none;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.15);
+.modal-content {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 440px;
+  padding: 28px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+  position: relative;
 }
 
 /* Inputs */
@@ -72,11 +112,11 @@ body {
   font-size: 14px;
   color: var(--text-main);
   outline: none;
-  transition: border-color 0.2s, background-color 0.2s;
+  transition: all 0.2s ease;
 }
 .input-premium:focus {
   border-color: var(--accent);
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--panel);
 }
 
 /* Buttons */
@@ -85,15 +125,15 @@ body {
   padding: 15px 22px;
   border-radius: var(--radius);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  background: #f3f4f6;
-  color: #070809;
+  background: var(--accent);
+  color: #ffffff;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.15s, transform 0.1s;
 }
 .btn-premium:hover {
-  background: #ffffff;
+  background-color: #1d4ed8;
 }
 .btn-premium:active {
   transform: scale(0.985);
@@ -115,30 +155,38 @@ body {
   border-color: var(--border-focus);
 }
 
-/* Panel Containers */
-.panel-prem {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 24px;
-  position: relative;
-  overflow: hidden;
+/* Floating visual side cards */
+.floating-card {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.15);
+  color: #111827;
+  pointer-events: none;
+  transition: transform 0.1s ease-out;
+}
+body.light-theme .floating-card {
+  background: rgba(255, 255, 255, 0.98);
 }
 
-/* Editor text area */
-.editor-textarea-prem {
-  width: 100%;
-  height: 100%;
-  min-height: 600px;
-  resize: none;
-  border: none;
-  background: transparent;
-  padding: 24px;
-  font-size: 14px;
-  line-height: 1.6;
-  font-family: 'JetBrains Mono', monospace;
+/* Theme Switcher Button */
+.theme-switch-btn {
+  border: 1px solid var(--border);
+  background: var(--panel-raised);
   color: var(--text-main);
-  outline: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+.theme-switch-btn:hover {
+  border-color: var(--border-focus);
 }
 
 /* Custom Tabs styling */
@@ -174,38 +222,32 @@ body {
   left: 3px;
   width: calc(50% - 3px);
   border-radius: 7px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--panel);
+  border: 1px solid var(--border);
   z-index: 1;
 }
 
-/* Roster participant rows */
-.roster-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: var(--panel-sunken);
+/* Panel Containers */
+.panel-prem {
+  background: var(--panel);
   border: 1px solid var(--border);
-  transition: background 0.15s;
-}
-.roster-row:hover {
-  background: rgba(255, 255, 255, 0.02);
+  border-radius: var(--radius);
+  padding: 24px;
+  position: relative;
 }
 
-/* Toast alert */
-.toast-prem {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  padding: 14px 22px;
-  border-radius: var(--radius);
-  background: #f3f4f6;
-  color: #070809;
-  font-size: 13px;
-  font-weight: 600;
-  z-index: 100;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+/* Editor text area */
+.editor-textarea-prem {
+  width: 100%;
+  height: 100%;
+  min-height: 600px;
+  resize: none;
+  border: none;
+  background: transparent;
+  padding: 24px;
+  font-size: 14px;
+  line-height: 1.6;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-main);
+  outline: none;
 }

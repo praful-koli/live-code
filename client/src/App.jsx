@@ -7,6 +7,7 @@ const API = import.meta.env.VITE_SERVER_URL
   : "http://localhost:3000/api/v1/rooms";
 
 const App = () => {
+  const [theme, setTheme] = useState("dark");
   const [tab, setTab] = useState("join");
   const [roomName, setRoomName] = useState("");
   const [roomCode, setRoomCode] = useState("");
@@ -24,10 +25,20 @@ const App = () => {
   const [isLocked, setIsLocked] = useState(false);
   const [connected, setConnected] = useState(socket.connected);
 
-  const containerRef = useRef(null);
+  // Custom Modal State
+  const [modal, setModal] = useState({
+    isOpen: false,
+    type: "alert", // "alert" | "confirm" | "prompt"
+    title: "",
+    message: "",
+    value: "",
+    onConfirm: null,
+    onCancel: null
+  });
+
+  const visualSideRef = useRef(null);
   const tabContentRef = useRef(null);
   const sliderIndicatorRef = useRef(null);
-  const bgLinesRef = useRef(null);
   const textareaRef = useRef(null);
   const contentRef = useRef("");
   const versionRef = useRef(0);
@@ -38,17 +49,10 @@ const App = () => {
 
   const log = (msg) => setLogs((p) => [...p.slice(-12), { id: Math.random(), text: msg, time: new Date().toLocaleTimeString() }]);
 
-  // Background Interactive SVGs - GSAP animated lines
+  // Light / Dark Mode Toggle handler
   useEffect(() => {
-    const lines = bgLinesRef.current;
-    if (lines) {
-      gsap.killTweensOf(lines.querySelectorAll("line"));
-      gsap.fromTo(lines.querySelectorAll("line"),
-        { strokeDashoffset: 100 },
-        { strokeDashoffset: 0, duration: 4, ease: "linear", repeat: -1, stagger: 0.5 }
-      );
-    }
-  }, [joined]);
+    document.body.className = theme === "light" ? "light-theme" : "";
+  }, [theme]);
 
   // Entrance animations for panels
   useEffect(() => {
@@ -58,12 +62,79 @@ const App = () => {
         { y: 0, opacity: 1, duration: 0.7, ease: "power4.out", stagger: 0.1 }
       );
     } else {
-      gsap.fromTo(".landing-card", 
-        { scale: 0.95, opacity: 0 }, 
-        { scale: 1, opacity: 1, duration: 0.6, ease: "power3.out" }
+      gsap.fromTo(".landing-form-block", 
+        { x: -30, opacity: 0 }, 
+        { x: 0, opacity: 1, duration: 0.6, ease: "power3.out" }
       );
+      // Floating animations for visual elements on the right
+      gsap.fromTo(".float-element-1", { y: -10 }, { y: 10, duration: 2.2, ease: "sine.inOut", yoyo: true, repeat: -1 });
+      gsap.fromTo(".float-element-2", { y: 8 }, { y: -8, duration: 2.8, ease: "sine.inOut", yoyo: true, repeat: -1 });
+      gsap.fromTo(".float-element-3", { y: -12 }, { y: 12, duration: 2.5, ease: "sine.inOut", yoyo: true, repeat: -1 });
     }
   }, [joined]);
+
+  // Dynamic Cursor tilt effect on Right Side Visual Panel
+  const handleMouseMove = (e) => {
+    if (!visualSideRef.current) return;
+    const rect = visualSideRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left - rect.width / 2;
+    const y = e.clientY - rect.top - rect.height / 2;
+    gsap.to(".float-element-1", { x: x * 0.08, y: y * 0.08, rotateX: -y * 0.03, rotateY: x * 0.03, duration: 0.5 });
+    gsap.to(".float-element-2", { x: x * -0.05, y: y * -0.05, rotateX: y * 0.02, rotateY: -x * 0.02, duration: 0.5 });
+    gsap.to(".float-element-3", { x: x * 0.04, y: y * 0.04, rotateX: -y * 0.015, rotateY: x * 0.015, duration: 0.5 });
+  };
+
+  // Custom Modal helper functions to replace browser native popups
+  const triggerAlert = (title, message) => {
+    setModal({
+      isOpen: true,
+      type: "alert",
+      title,
+      message,
+      value: "",
+      onConfirm: () => setModal(m => ({ ...m, isOpen: false }))
+    });
+  };
+
+  const triggerConfirm = (title, message, onConfirm) => {
+    setModal({
+      isOpen: true,
+      type: "confirm",
+      title,
+      message,
+      value: "",
+      onConfirm: () => {
+        onConfirm();
+        setModal(m => ({ ...m, isOpen: false }));
+      },
+      onCancel: () => setModal(m => ({ ...m, isOpen: false }))
+    });
+  };
+
+  const triggerPrompt = (title, message, defaultValue = "", onConfirm) => {
+    setModal({
+      isOpen: true,
+      type: "prompt",
+      title,
+      message,
+      value: defaultValue,
+      onConfirm: (val) => {
+        onConfirm(val);
+        setModal(m => ({ ...m, isOpen: false }));
+      },
+      onCancel: () => setModal(m => ({ ...m, isOpen: false }))
+    });
+  };
+
+  // Modal GSAP Entry Transition
+  useEffect(() => {
+    if (modal.isOpen) {
+      gsap.fromTo(".modal-content", 
+        { scale: 0.9, opacity: 0, y: 20 }, 
+        { scale: 1, opacity: 1, y: 0, duration: 0.35, ease: "back.out(1.6)" }
+      );
+    }
+  }, [modal.isOpen]);
 
   // Version bump animation
   useEffect(() => {
@@ -79,13 +150,11 @@ const App = () => {
   const handleTabChange = (nextTab) => {
     if (nextTab === tab) return;
     const isCreate = nextTab === "create";
-    // Slide background pill
     gsap.to(sliderIndicatorRef.current, {
       left: isCreate ? "calc(50% + 1px)" : "3px",
       duration: 0.35,
       ease: "power3.inOut"
     });
-    // Fade out form fields, update state, and fade back in
     gsap.to(tabContentRef.current, {
       opacity: 0,
       y: -6,
@@ -153,11 +222,31 @@ const App = () => {
     };
   }, []);
 
+  // hostAct Helper (using custom triggerAlert modal instead of native alert)
+  const hostAct = async (url, method = "PATCH", body) => {
+    try {
+      const o = { method, credentials: "include" };
+      if (body) { o.headers = { "Content-Type": "application/json" }; o.body = JSON.stringify(body); }
+      const r = await (await fetch(url, o)).json();
+      if (!r.success) throw new Error(r.message);
+      return r;
+    } catch (e) {
+      triggerAlert("Action Required", e.message);
+      return null;
+    }
+  };
+
   const joinSession = (code, pid, name) => {
     if (!socket.connected) socket.connect();
     socket.emit("room:join", { roomCode: code.toUpperCase(), participantId: pid });
     socket.emit("doc:load", { roomCode: code.toUpperCase() });
-    fetch(`${API}/${code}`, { credentials: "include" }).then(r => r.json()).then(d => { if (d.success) setIsLocked(d.data?.isLocked || false); }).catch(() => {});
+    fetch(`${API}/${code}`, { credentials: "include" }).then(r => r.json()).then(d => {
+      if (d.success) {
+        setIsLocked(d.data?.isLocked || false);
+      } else {
+        triggerAlert("Session Alert", d.message || "Failed to load room details.");
+      }
+    }).catch(() => {});
     setJoined(true); log("Session initialized");
   };
 
@@ -181,7 +270,15 @@ const App = () => {
     try {
       setStatusMessage("Connecting...");
       const r = await (await fetch(`${API}/join`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ roomCode: roomCode.trim().toUpperCase(), name: displayName.trim() }) })).json();
-      if (!r.success) throw new Error(r.message);
+      if (!r.success) {
+        if (r.message.includes("Host authentication required")) {
+          triggerAlert("Authentication Required", "Only the validated host session can rename or terminate this room.");
+        } else {
+          triggerAlert("Entry Denied", r.message);
+        }
+        setStatusMessage("");
+        return;
+      }
       setParticipantId(r.data.participant._id); setIsHost(false);
       save(r.data.room.roomCode, r.data.participant.name, r.data.participant._id, false);
       joinSession(r.data.room.roomCode, r.data.participant._id, r.data.participant.name); setStatusMessage("");
@@ -216,59 +313,40 @@ const App = () => {
     socket.emit("doc:cursor", { roomCode: roomCode.toUpperCase(), cursor: { participantId, participantName: displayName, position: e.target.selectionStart } });
   };
 
-  const hostAct = async (url, method = "PATCH", body) => {
-    try {
-      const o = { method, credentials: "include" };
-      if (body) { o.headers = { "Content-Type": "application/json" }; o.body = JSON.stringify(body); }
-      const r = await (await fetch(url, o)).json();
-      if (!r.success) throw new Error(r.message); return r;
-    } catch (e) { alert(e.message); return null; }
-  };
-
   return (
-    <div ref={containerRef} style={{ minHeight: "100vh", padding: 24, position: "relative" }}>
+    <div style={{ minHeight: "100vh", position: "relative" }}>
       
-      {/* Background Interactive SVGs */}
-      <svg ref={bgLinesRef} className="canvas-bg" viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg">
-        <line x1="10%" y1="0" x2="10%" y2="100%" stroke="var(--border)" strokeWidth="1" strokeDasharray="5,5" />
-        <line x1="50%" y1="0" x2="50%" y2="100%" stroke="var(--border)" strokeWidth="1" strokeDasharray="5,5" />
-        <line x1="90%" y1="0" x2="90%" y2="100%" stroke="var(--border)" strokeWidth="1" strokeDasharray="5,5" />
-        <line x1="0" y1="30%" x2="100%" y2="30%" stroke="var(--border)" strokeWidth="1" strokeDasharray="5,5" />
-        <line x1="0" y1="70%" x2="100%" y2="70%" stroke="var(--border)" strokeWidth="1" strokeDasharray="5,5" />
-      </svg>
+      {!joined ? (
+        /* ─── SPLITSCREEN LANDING PAGE (Linktree inspired layout) ─── */
+        <div className="splitscreen-container">
+          
+          {/* Left Form side */}
+          <div className="form-side" style={{ padding: "32px 48px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <svg style={{ width: 22, height: 22, fill: "none", stroke: "var(--accent)", strokeWidth: 2.5 }} viewBox="0 0 24 24">
+                  <path d="M16 18l6-6-6-6M8 6L2 12l6 6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <span style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.02em" }}>CodeRoom</span>
+              </div>
+              <button className="theme-switch-btn" onClick={() => setTheme(t => t === "dark" ? "light" : "dark")}>
+                {theme === "dark" ? "Light Theme" : "Dark Theme"}
+              </button>
+            </div>
 
-      <div style={{ maxWidth: 1280, margin: "0 auto", display: "flex", flexDirection: "column", gap: 20 }}>
-        
-        {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 4px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <svg style={{ width: 24, height: 24, fill: "none", stroke: "var(--accent)", strokeWidth: 2 }} viewBox="0 0 24 24">
-              <path d="M16 18l6-6-6-6M8 6L2 12l6 6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: "-0.03em" }}>CodeRoom</span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: connected ? "var(--success)" : "var(--danger)", display: "flex", alignItems: "center", gap: 6 }}>
-              <span className="live-dot" style={{ width: 6, height: 6, borderRadius: "50%", background: connected ? "var(--success)" : "var(--danger)", display: "inline-block" }} />
-              {connected ? "LIVE" : "DISCONNECTED"}
-            </span>
-          </div>
-        </div>
+            <div className="landing-form-block" style={{ maxWidth: 400, width: "100%", margin: "24px 0" }}>
+              <h2 style={{ fontSize: 32, fontWeight: 800, letterSpacing: "-0.04em", marginBottom: 8 }}>Welcome Back</h2>
+              <p style={{ color: "var(--text-muted)", fontSize: 14, marginBottom: 24 }}>Access or provision your real-time collaborative code buffer.</p>
 
-        {!joined ? (
-          /* ─── LANDING SCREEN ─── */
-          <div style={{ maxWidth: 440, margin: "80px auto 0 auto", width: "100%" }}>
-            <div className="panel-prem landing-card">
-              {/* Tab Selector */}
+              {/* Tabs */}
               <div className="custom-tabs">
                 <div ref={sliderIndicatorRef} className="custom-tab-active-indicator" />
-                <button className={`custom-tab-btn ${tab === "join" ? "active" : ""}`} onClick={() => handleTabChange("join")}>Join Room</button>
-                <button className={`custom-tab-btn ${tab === "create" ? "active" : ""}`} onClick={() => handleTabChange("create")}>Create Room</button>
+                <button className={`custom-tab-btn ${tab === "join" ? "active" : ""}`} onClick={() => handleTabChange("join")}>Join Workspace</button>
+                <button className={`custom-tab-btn ${tab === "create" ? "active" : ""}`} onClick={() => handleTabChange("create")}>Create Workspace</button>
               </div>
 
-              <div style={{ height: 28 }} />
+              <div style={{ height: 20 }} />
 
-              {/* Form Content Wrapper */}
               <div ref={tabContentRef}>
                 {tab === "join" ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
@@ -277,7 +355,7 @@ const App = () => {
                       <input className="input-premium mono" value={roomCode} onChange={(e) => setRoomCode(e.target.value)} placeholder="ABCD" />
                     </div>
                     <div>
-                      <label className="field-label">Display Nickname</label>
+                      <label className="field-label">Nickname</label>
                       <input className="input-premium" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Nickname" />
                     </div>
                     <button className="btn-premium" onClick={handleJoin}>Join Session</button>
@@ -286,26 +364,92 @@ const App = () => {
                   <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
                     <div>
                       <label className="field-label">Room Name</label>
-                      <input className="input-premium" value={roomName} onChange={(e) => setRoomName(e.target.value)} placeholder="My Workspace" />
+                      <input className="input-premium" value={roomName} onChange={(e) => setRoomName(e.target.value)} placeholder="My Buffer" />
                     </div>
                     <div>
                       <label className="field-label">Host Nickname</label>
                       <input className="input-premium" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Host Name" />
                     </div>
-                    <button className="btn-premium" onClick={handleCreate}>Provision Room</button>
+                    <button className="btn-premium" onClick={handleCreate}>Create Workspace</button>
                   </div>
                 )}
               </div>
             </div>
+
+            <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+              &copy; {new Date().getFullYear()} CodeRoom. Built on MERN & WebSockets.
+            </div>
           </div>
-        ) : (
-          /* ─── MINIMAL EDITOR WORKSPACE ─── */
+
+          {/* Right Visual side (Tilt elements relative to cursor) */}
+          <div ref={visualSideRef} className="visual-side" onMouseMove={handleMouseMove}>
+            
+            {/* SVG Interactive code card */}
+            <div className="floating-card float-element-1" style={{ top: "15%", left: "15%", width: 280 }}>
+              <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#ef4444" }} />
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#eab308" }} />
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e" }} />
+              </div>
+              <p style={{ fontFamily: "monospace", fontSize: 12, lineHeight: 1.6, color: "#4b5563" }}>
+                <span style={{ color: "#2563eb" }}>const</span> buffer = <span style={{ color: "#16a34a" }}>"CodeRoom"</span>;<br />
+                <span style={{ color: "#2563eb" }}>socket</span>.emit(<span style={{ color: "#d97706" }}>'doc:delta'</span>);
+              </p>
+            </div>
+
+            {/* SVG Users indicator bubble */}
+            <div className="floating-card float-element-2" style={{ top: "45%", right: "12%", width: 220, background: "#111827", color: "#f3f4f6" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#10b981" }} />
+                <div>
+                  <p style={{ fontSize: 13, fontWeight: 700 }}>3 Active Members</p>
+                  <p style={{ fontSize: 11, color: "#9ca3af" }}>Real-time synched</p>
+                </div>
+              </div>
+            </div>
+
+            {/* SVG Play cursor indicator */}
+            <div className="floating-card float-element-3" style={{ bottom: "18%", left: "20%", padding: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <svg style={{ width: 16, height: 16, fill: "#2563eb" }} viewBox="0 0 24 24">
+                  <path d="M7 2v20l5.828-5.828L19 22l3-3-5.828-5.828L22 7H7z" />
+                </svg>
+                <span style={{ fontSize: 12, fontWeight: 600 }}>Alice typing...</span>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      ) : (
+        /* ─── WORKSPACE (Main App Editor) ─── */
+        <div style={{ maxWidth: 1280, margin: "0 auto", padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
+          
+          {/* Workspace Header */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 4px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <svg style={{ width: 24, height: 24, fill: "none", stroke: "var(--accent)", strokeWidth: 2 }} viewBox="0 0 24 24">
+                <path d="M16 18l6-6-6-6M8 6L2 12l6 6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: "-0.03em" }}>CodeRoom</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+              <button className="theme-switch-btn" onClick={() => setTheme(t => t === "dark" ? "light" : "dark")}>
+                {theme === "dark" ? "Light" : "Dark"}
+              </button>
+              <span style={{ fontSize: 11, fontWeight: 700, color: connected ? "var(--success)" : "var(--danger)", display: "flex", alignItems: "center", gap: 6 }}>
+                <span className="live-dot" style={{ width: 6, height: 6, borderRadius: "50%", background: connected ? "var(--success)" : "var(--danger)", display: "inline-block" }} />
+                {connected ? "LIVE" : "DISCONNECTED"}
+              </span>
+            </div>
+          </div>
+
           <div style={{ display: "grid", gap: 20, gridTemplateColumns: "280px 1fr" }}>
             
-            {/* Sidebar Columns */}
+            {/* Sidebar columns */}
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               
-              {/* Session details */}
+              {/* Session parameters */}
               <div className="panel-prem workspace-panel">
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
                   <div>
@@ -325,12 +469,25 @@ const App = () => {
                 <div className="panel-prem workspace-panel">
                   <span className="field-label" style={{ marginBottom: 12 }}>Room Controls</span>
                   <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-                    <button style={{ flex: 1 }} className="btn-secondary-prem" onClick={async () => { const n = prompt("Rename room:"); if (n) { await hostAct(`${API}/${roomCode.toUpperCase()}/rename`, "PATCH", { roomName: n.trim() }); log("Room renamed"); } }}>Rename</button>
+                    <button style={{ flex: 1 }} className="btn-secondary-prem" onClick={() => {
+                      triggerPrompt("Rename Room", "Enter new workspace label:", roomName, async (newVal) => {
+                        if (newVal && newVal.trim()) {
+                          await hostAct(`${API}/${roomCode.toUpperCase()}/rename`, "PATCH", { roomName: newVal.trim() });
+                          log("Room renamed");
+                        }
+                      });
+                    }}>Rename</button>
                     {isLocked
                       ? <button className="btn-secondary-prem" style={{ color: "var(--success)", borderColor: "rgba(82, 168, 116, 0.2)" }} onClick={async () => { if (await hostAct(`${API}/${roomCode.toUpperCase()}/unlock`)) { setIsLocked(false); log("Unlocked"); } }}>Unlock</button>
                       : <button className="btn-secondary-prem" style={{ color: "var(--warning)", borderColor: "rgba(224, 159, 83, 0.2)" }} onClick={async () => { if (await hostAct(`${API}/${roomCode.toUpperCase()}/lock`)) { setIsLocked(true); log("Locked"); } }}>Lock</button>}
                   </div>
-                  <button className="btn-secondary-prem" style={{ width: "100%", color: "var(--danger)", borderColor: "rgba(217, 95, 95, 0.2)" }} onClick={async () => { if (confirm("Close workspace for everyone?") && await hostAct(`${API}/${roomCode.toUpperCase()}/delete`, "DELETE")) handleLeave(); }}>Terminate Room</button>
+                  <button className="btn-secondary-prem" style={{ width: "100%", color: "var(--danger)", borderColor: "rgba(217, 95, 95, 0.2)" }} onClick={() => {
+                    triggerConfirm("Terminate Room", "De-provision workspace and close room for everyone?", async () => {
+                      if (await hostAct(`${API}/${roomCode.toUpperCase()}/delete`, "DELETE")) {
+                        handleLeave();
+                      }
+                    });
+                  }}>Terminate Room</button>
                 </div>
               )}
 
@@ -351,7 +508,11 @@ const App = () => {
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         {typingUsers.includes(p.name) && <span style={{ fontSize: 9, color: "var(--accent)", fontWeight: 600 }}>typing</span>}
                         {editingUsers[p._id] && <span style={{ fontSize: 9, color: "var(--text-muted)" }}>@{editingUsers[p._id].pos}</span>}
-                        {isHost && !p.isHost && <button className="kick-btn-min" onClick={() => { if (confirm(`Remove ${p.name}?`)) hostAct(`${API}/${roomCode.toUpperCase()}/participants/${p._id}`, "DELETE"); }}>✕</button>}
+                        {isHost && !p.isHost && <button className="kick-btn-min" onClick={() => {
+                          triggerConfirm("Remove Participant", `Remove ${p.name}?`, () => {
+                            hostAct(`${API}/${roomCode.toUpperCase()}/participants/${p._id}`, "DELETE");
+                          });
+                        }}>✕</button>}
                       </div>
                     </div>
                   ))}
@@ -390,10 +551,40 @@ const App = () => {
             </div>
 
           </div>
-        )}
+        </div>
+      )}
 
-        {statusMessage && <div className="toast-prem">{statusMessage}</div>}
-      </div>
+      {statusMessage && <div className="toast-prem">{statusMessage}</div>}
+
+      {/* ─── CUSTOM PREMIUM MODAL COMPONENT (Replacing browser alert/confirm/prompt) ─── */}
+      {modal.isOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3 style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.03em", marginBottom: 10 }}>{modal.title}</h3>
+            <p style={{ color: "var(--text-muted)", fontSize: 14, lineHeight: 1.5, marginBottom: 20 }}>{modal.message}</p>
+
+            {modal.type === "prompt" && (
+              <div style={{ marginBottom: 20 }}>
+                <input 
+                  type="text" 
+                  className="input-premium" 
+                  value={modal.value} 
+                  onChange={(e) => setModal({ ...modal, value: e.target.value })} 
+                  autoFocus 
+                />
+              </div>
+            )}
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+              {(modal.type === "confirm" || modal.type === "prompt") && (
+                <button className="btn-secondary-prem" onClick={modal.onCancel}>Cancel</button>
+              )}
+              <button className="btn-premium" style={{ width: "auto", padding: "10px 20px" }} onClick={() => modal.onConfirm(modal.value)}>Confirm</button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
