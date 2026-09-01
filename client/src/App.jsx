@@ -260,9 +260,18 @@ const App = () => {
   };
 
   const joinSession = (code, pid, name) => {
-    if (!socket.connected) socket.connect();
-    socket.emit("room:join", { roomCode: code.toUpperCase(), participantId: pid });
-    socket.emit("doc:load", { roomCode: code.toUpperCase() });
+    const doJoin = () => {
+      socket.emit("room:join", { roomCode: code.toUpperCase(), participantId: pid });
+      socket.emit("doc:load", { roomCode: code.toUpperCase() });
+    };
+
+    if (!socket.connected) {
+      socket.connect();
+      socket.once("connect", doJoin);
+    } else {
+      doJoin();
+    }
+
     fetch(`${API}/${code}`, { credentials: "include" }).then(r => r.json()).then(d => {
       if (d.success) {
         setIsLocked(d.data?.isLocked || false);
@@ -367,8 +376,10 @@ const App = () => {
             </div>
 
             <div className="landing-form-block" style={{ maxWidth: 400, width: "100%", margin: "24px 0" }}>
-              <h2 style={{ fontSize: 32, fontWeight: 800, letterSpacing: "-0.04em", marginBottom: 8 }}>Welcome Back</h2>
-              <p style={{ color: "var(--text-muted)", fontSize: 14, marginBottom: 24 }}>Access or provision your real-time collaborative code buffer.</p>
+              <h2 style={{ fontSize: 32, fontWeight: 800, letterSpacing: "-0.04em", marginBottom: 8 }}>Instant Code Sandbox</h2>
+              <p style={{ color: "var(--text-muted)", fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
+                Create temporary, zero-setup collaborative rooms to instantly share code snippets, conduct live technical interviews, debug together, or whiteboard ideas in real-time.
+              </p>
 
               {/* Tabs */}
               <div className="custom-tabs">
@@ -413,77 +424,63 @@ const App = () => {
             </div>
           </div>
 
-          {/* Right Visual side (GSAP Hover reactive visual cards) */}
-          <div className="visual-side">
+          {/* Right Visual side (Use cases & feature highlights) */}
+          <div className="visual-side" style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 18, padding: 48, background: "linear-gradient(135deg, rgba(37,99,235,0.9), rgba(79,70,229,0.95))" }}>
             
-            {/* SVG Interactive code card */}
+            <div style={{ color: "#ffffff", marginBottom: 12 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", opacity: 0.8 }}>Why CodeRoom?</span>
+              <h3 style={{ fontSize: 28, fontWeight: 800, letterSpacing: "-0.03em", marginTop: 4 }}>What can you do in a temporary CodeRoom?</h3>
+            </div>
+
+            {/* Feature Card 1 */}
             <div 
-              className="floating-card float-element-1" 
-              style={{ top: "15%", left: "15%", width: 280 }}
+              className="floating-card" 
+              style={{ background: "rgba(255, 255, 255, 0.12)", backdropFilter: "blur(12px)", border: "1px solid rgba(255, 255, 255, 0.2)", borderRadius: 14, padding: 18, color: "#fff" }}
               onMouseEnter={handleCardHoverIn}
               onMouseLeave={handleCardHoverOut}
             >
-              <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#ef4444" }} />
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#eab308" }} />
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e" }} />
-              </div>
-              <p style={{ fontFamily: "monospace", fontSize: 12, lineHeight: 1.6, color: "#4b5563" }}>
-                <span style={{ color: "#2563eb" }}>const</span> buffer = <span style={{ color: "#16a34a" }}>"CodeRoom"</span>;<br />
-                <span style={{ color: "#2563eb" }}>socket</span>.emit(<span style={{ color: "#d97706" }}>'doc:delta'</span>);
-              </p>
-            </div>
-
-            {/* SVG Interactive Mesh Topology card */}
-            <div 
-              className="floating-card float-element-2" 
-              style={{ top: "45%", right: "12%", width: 240, background: "rgba(15, 23, 42, 0.8)", backdropFilter: "blur(12px)", border: "1px solid rgba(255, 255, 255, 0.08)", color: "#f3f4f6", padding: 14 }}
-              onMouseEnter={handleDarkCardHoverIn}
-              onMouseLeave={handleDarkCardHoverOut}
-            >
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <svg width="36" height="36" viewBox="0 0 40 40" style={{ flexShrink: 0 }}>
-                  <circle cx="20" cy="8" r="4.5" fill="#3b82f6" />
-                  <circle cx="10" cy="30" r="4.5" fill="#10b981" />
-                  <circle cx="30" cy="30" r="4.5" fill="#6366f1" />
-                  <circle cx="20" cy="22" r="3.5" fill="#f59e0b" />
-                  <line x1="20" y1="8" x2="10" y2="30" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" strokeDasharray="3 3" />
-                  <line x1="20" y1="8" x2="30" y2="30" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" strokeDasharray="3 3" />
-                  <line x1="10" y1="30" x2="30" y2="30" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" strokeDasharray="3 3" />
-                  <line x1="20" y1="22" x2="20" y2="8" stroke="rgba(255,255,255,0.25)" strokeWidth="1.2" />
-                  <line x1="20" y1="22" x2="10" y2="30" stroke="rgba(255,255,255,0.25)" strokeWidth="1.2" />
-                  <line x1="20" y1="22" x2="30" y2="30" stroke="rgba(255,255,255,0.25)" strokeWidth="1.2" />
-                </svg>
+                <span style={{ fontSize: 22, background: "rgba(255,255,255,0.2)", width: 42, height: 42, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>⚡</span>
                 <div>
-                  <p style={{ fontSize: 13, fontWeight: 700, margin: 0, letterSpacing: "-0.01em" }}>Mesh Topology</p>
-                  <p style={{ fontSize: 11, color: "#9ca3af", margin: "2px 0 0 0" }}>Active Peer Protocol</p>
+                  <h4 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Instant Pair Programming & Debugging</h4>
+                  <p style={{ fontSize: 13, opacity: 0.9, margin: "4px 0 0 0", lineHeight: 1.4 }}>Share an issue or log with a teammate in seconds. No login or repo cloning required.</p>
                 </div>
               </div>
             </div>
 
-            {/* SVG Conflict Resolver/Git Merge card */}
+            {/* Feature Card 2 */}
             <div 
-              className="floating-card float-element-3" 
-              style={{ bottom: "18%", left: "20%", width: 230, padding: 14, background: "rgba(15, 23, 42, 0.8)", backdropFilter: "blur(12px)", border: "1px solid rgba(255, 255, 255, 0.08)", color: "#f3f4f6" }}
-              onMouseEnter={handleDarkCardHoverIn}
-              onMouseLeave={handleDarkCardHoverOut}
+              className="floating-card" 
+              style={{ background: "rgba(255, 255, 255, 0.12)", backdropFilter: "blur(12px)", border: "1px solid rgba(255, 255, 255, 0.2)", borderRadius: 14, padding: 18, color: "#fff" }}
+              onMouseEnter={handleCardHoverIn}
+              onMouseLeave={handleCardHoverOut}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                  <line x1="6" y1="3" x2="6" y2="15" />
-                  <circle cx="18" cy="6" r="3" stroke="#818cf8" />
-                  <circle cx="6" cy="18" r="3" />
-                  <path d="M18 9a9 9 0 0 1-9 9" stroke="#818cf8" strokeDasharray="3 3" />
-                </svg>
+                <span style={{ fontSize: 22, background: "rgba(255,255,255,0.2)", width: 42, height: 42, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>🎯</span>
                 <div>
-                  <p style={{ fontSize: 13, fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
-                    Delta Resolver
-                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#10b981", display: "inline-block" }} />
-                  </p>
-                  <p style={{ fontSize: 11, color: "#9ca3af", margin: "2px 0 0 0" }}>Merged conflict-free</p>
+                  <h4 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Live Technical Interviews</h4>
+                  <p style={{ fontSize: 13, opacity: 0.9, margin: "4px 0 0 0", lineHeight: 1.4 }}>Host coding challenges with real-time cursor tracking, user presence, and version control.</p>
                 </div>
               </div>
             </div>
+
+            {/* Feature Card 3 */}
+            <div 
+              className="floating-card" 
+              style={{ background: "rgba(255, 255, 255, 0.12)", backdropFilter: "blur(12px)", border: "1px solid rgba(255, 255, 255, 0.2)", borderRadius: 14, padding: 18, color: "#fff" }}
+              onMouseEnter={handleCardHoverIn}
+              onMouseLeave={handleCardHoverOut}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ fontSize: 22, background: "rgba(255,255,255,0.2)", width: 42, height: 42, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>🔒</span>
+                <div>
+                  <h4 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Disposable Scratchpad & Controls</h4>
+                  <p style={{ fontSize: 13, opacity: 0.9, margin: "4px 0 0 0", lineHeight: 1.4 }}>Host controls let you lock rooms, manage active roster, and terminate session when done.</p>
+                </div>
+              </div>
+            </div>
+
+          </div>
 
           </div>
 
